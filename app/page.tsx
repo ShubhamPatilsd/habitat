@@ -7,7 +7,6 @@ export default function Home() {
   const [animationState, setAnimationState] = useState<'idle' | 'scrolling' | 'plane3d' | 'diving' | 'transformed'>('idle');
   const [scrollProgress, setScrollProgress] = useState(0);
   const router = useRouter();
-
   const handleTakeMeClick = () => {
     setAnimationState('scrolling');
     

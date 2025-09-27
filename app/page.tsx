@@ -2,21 +2,17 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from "next/image";
-import Link from "next/link";
 
 export default function Home() {
   const [animationState, setAnimationState] = useState<'idle' | 'scrolling' | 'plane3d' | 'diving' | 'transformed'>('idle');
   const [scrollProgress, setScrollProgress] = useState(0);
   const router = useRouter();
 
-  const 
-  
-  Click = () => {
+  const handleTakeMeClick = () => {
     setAnimationState('scrolling');
     
     // Smooth scroll animation with page scroll
-    const scrollDuration = 2250; 
+    const scrollDuration = 2000; 
     const startTime = Date.now();
     
     const scrollAnimation = () => {
@@ -47,13 +43,12 @@ export default function Home() {
       if (progress < 1) {
         requestAnimationFrame(scrollAnimation);
       } else {
-        // Show 3D plane after scroll completes (fade in quickly)
+        // Show 3D plane after scroll completes
         setTimeout(() => setAnimationState('plane3d'), 200);
-        // Start diving animation and navigate immediately
+        // Start diving animation and navigation
         setTimeout(() => {
           setAnimationState('diving');
-          // Navigate to node.tsx immediately after diving starts
-          // setTimeout(() => router.push('/node/page.tsx'), 1000);
+          setTimeout(() => router.push('../nodes'), 1000);
         }, 1000);
       }
     };
@@ -68,9 +63,9 @@ export default function Home() {
         <p className="text-xl mt-4 ml-2">
           It's a place where curiosity is nurtured,
           <br />
-          where you can explore new ideas, and
+          Where you can explore new ideas, and
           <br />
-          rediscover the joy of discovery.
+          Rediscover the joy of discovery.
         </p>
         <button 
           onClick={handleTakeMeClick}
@@ -83,9 +78,9 @@ export default function Home() {
         <div 
           className="w-2 mt-0 ml-[20%] relative z-[100]"
           style={{
-            height: animationState === 'idle' ? '0px' : `${scrollProgress * 100}vh`,
+            height: animationState === 'idle' ? '0px' : `${Math.min(scrollProgress * 80, 80)}vh`,
             background: animationState === 'idle' ? 'transparent' : 'linear-gradient(to bottom, #fff0d2, #1e00ff, #1e00ff)',
-            opacity: (animationState === 'idle' || animationState === 'plane3d' || animationState === 'diving') ? 0 : 1,
+            opacity: animationState === 'scrolling' ? 1 : 0,
             transition: 'opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1)'
           }}
         ></div>
@@ -93,7 +88,7 @@ export default function Home() {
         {/* Spacer to create scrollable content */}
         <div 
           style={{
-            height: animationState === 'idle' ? '0px' : `${scrollProgress * 100}vh`,
+            height: animationState === 'idle' ? '0px' : '100vh',
             transition: 'none' // No transition for spacer - it follows the scroll directly
           }}
         ></div>
@@ -103,7 +98,7 @@ export default function Home() {
       {animationState === 'plane3d' || animationState === 'diving' ? (
         <div 
           className={`fixed inset-0 transition-all duration-1000 ${
-            animationState === 'plane3d' ? 'opacity-100 scale-100' : 
+            animationState === 'plane3d' ? 'opacity-100 scale-100 ease-in' : 
             'opacity-100'
           }`}
           style={{
@@ -113,11 +108,21 @@ export default function Home() {
           }}
         >
             <div 
-              className={`bg-[#fff0d2] w-screen h-screen transition-all duration-1000`}
+              className="bg-[#fff0d2] transition-all duration-1000"
               style={{
-                background: 'linear-gradient(145deg, #fff0d2 0%, #f5e6c8 50%, #ebd9b8 100%)',
-                transform: animationState === 'plane3d' ? 'rotateX(45deg) translateZ(50px) translateY(2rem)' : 'rotateX(0deg) translateZ(0px) scale(1.5)',
-                transformOrigin: 'center center'
+                background: 'linear-gradient(145deg, #fff0d2 0%, #fff0d2 60%, #f5e6c8 100%)',
+                transform: animationState === 'plane3d' ? 
+                  'rotateX(80deg) translateZ(50px) translateY(70vh) scale(0.7, 0.7) scaleX(1.4)' : 
+                  'rotateX(0deg) translateZ(0px) scale(3)',
+                transformOrigin: 'center center',
+                width: '800px',
+                height: '600px',
+                position: 'absolute',
+                left: '50%',
+                top: '50%',
+                marginLeft: '-400px',
+                marginTop: '-300px',
+                transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)'
               }}
             >
             {/* Plate texture */}

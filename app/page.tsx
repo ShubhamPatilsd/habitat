@@ -2,17 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from "next/image";
-import Link from "next/link";
 
 export default function Home() {
   const [animationState, setAnimationState] = useState<'idle' | 'scrolling' | 'plane3d' | 'diving' | 'transformed'>('idle');
   const [scrollProgress, setScrollProgress] = useState(0);
   const router = useRouter();
-
-  const 
   
-  Click = () => {
+  const handleTakeMeClick = () => {
     setAnimationState('scrolling');
     
     // Smooth scroll animation with page scroll
@@ -53,7 +49,7 @@ export default function Home() {
         setTimeout(() => {
           setAnimationState('diving');
           // Navigate to node.tsx immediately after diving starts
-          // setTimeout(() => router.push('/node/page.tsx'), 1000);
+          setTimeout(() => router.push('../nodes'), 1000);
         }, 1000);
       }
     };

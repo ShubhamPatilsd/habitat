@@ -2,13 +2,17 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from "next/image";
+import Link from "next/link";
 
 export default function Home() {
   const [animationState, setAnimationState] = useState<'idle' | 'scrolling' | 'plane3d' | 'diving' | 'transformed'>('idle');
   const [scrollProgress, setScrollProgress] = useState(0);
   const router = useRouter();
 
-  const handleTakeMeClick = () => {
+  const 
+  
+  Click = () => {
     setAnimationState('scrolling');
     
     // Smooth scroll animation with page scroll
@@ -64,9 +68,9 @@ export default function Home() {
         <p className="text-xl mt-4 ml-2">
           It's a place where curiosity is nurtured,
           <br />
-          Where you can explore new ideas, and
+          where you can explore new ideas, and
           <br />
-          Rediscover the joy of discovery.
+          rediscover the joy of discovery.
         </p>
         <button 
           onClick={handleTakeMeClick}

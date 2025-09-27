@@ -112,7 +112,7 @@ export default function Home() {
               className={`bg-[#fff0d2] w-screen h-screen transition-all duration-1000`}
               style={{
                 background: 'linear-gradient(145deg, #fff0d2 0%, #f5e6c8 50%, #ebd9b8 100%)',
-                transform: animationState === 'plane3d' ? 'rotateX(45deg) translateZ(50px) translateY(2rem)' : 'rotateX(0deg) translateZ(0px) scale(1.5)',
+                transform: animationState === 'plane3d' ? 'rotateX(80deg) translateZ(50px) translateY(2rem)' : 'rotateX(0deg) translateZ(0px) scale(1.5)',
                 transformOrigin: 'center center'
               }}
             >

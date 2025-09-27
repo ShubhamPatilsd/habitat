@@ -1,5 +1,4 @@
 "use client";
-
 import {useState, useRef, useEffect} from "react";
 
 interface Node {
@@ -31,8 +30,33 @@ export default function NodesPage() {
   const [lastOffset, setLastOffset] = useState({x: 0, y: 0});
   const [zoom, setZoom] = useState(1);
   const [isPhysicsEnabled, setIsPhysicsEnabled] = useState(true);
+  const [showBurrowAnimation, setShowBurrowAnimation] = useState(false);
+  const [showRabbitHole, setShowRabbitHole] = useState(false);
+  const [holeAnimation, setHoleAnimation] = useState<
+    "appear" | "zoom" | "done"
+  >("appear");
   const containerRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<number | null>(null);
+
+  const handleBurrow = () => {
+    setShowBurrowAnimation(true);
+    setTimeout(() => {
+      setShowBurrowAnimation(false);
+      setShowRabbitHole(true);
+      setHoleAnimation("appear");
+
+      // Start zoom animation after 1 second
+      setTimeout(() => {
+        setHoleAnimation("zoom");
+
+        // Hide the hole after zoom animation completes
+        setTimeout(() => {
+          setHoleAnimation("done");
+          setShowRabbitHole(false);
+        }, 2000);
+      }, 1000);
+    }, 2000);
+  };
 
   // Function to center the view on a specific node
   const centerOnNode = (node: Node) => {
@@ -67,69 +91,96 @@ export default function NodesPage() {
   const generateNewNodes = (parentNode: Node) => {
     const newNodes: Node[] = [];
     const newConnections: {from: string; to: string}[] = [];
+    const radius = 300; // Base radius for spacing
 
-    // Generate 5 new nodes in a circle around the parent
-    const angleStep = (2 * Math.PI) / 5;
-    const radius = 300; // Increase radius for each level
+    // Determine if this is the root node (no parent)
+    const isRootNode = !parentNode.parentId;
 
-    console.log(
-      `Generating 5 nodes around parent ${parentNode.id} at (${parentNode.x}, ${parentNode.y})`
-    );
+    if (isRootNode) {
+      // For root node, generate 5 nodes in a full circle
+      const angleStep = (2 * Math.PI) / 5;
 
-    // Move the parent node further away from its parent (if it has one)
-    if (parentNode.parentId) {
-      const grandParent = nodes.find((n) => n.id === parentNode.parentId);
-      if (grandParent) {
-        // Calculate the direction from grandparent to parent
-        const dx = parentNode.x - grandParent.x;
-        const dy = parentNode.y - grandParent.y;
+      for (let i = 0; i < 5; i++) {
+        const angle = i * angleStep;
+        const x = parentNode.x + Math.cos(angle) * radius;
+        const y = parentNode.y + Math.sin(angle) * radius;
+
+        const newNode: Node = {
+          id: `${parentNode.id}-${i}`,
+          x,
+          y,
+          text: `Node ${i + 1}`,
+          level: parentNode.level + 1,
+          parentId: parentNode.id,
+        };
+
+        newNodes.push(newNode);
+        newConnections.push({from: parentNode.id, to: newNode.id});
+      }
+    } else {
+      // For non-root nodes, first find the direction to the parent
+      const parent = nodes.find((n: Node) => n.id === parentNode.parentId);
+      if (parent) {
+        // Calculate direction from parent to current node
+        const dx = parentNode.x - parent.x;
+        const dy = parentNode.y - parent.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
 
-        if (distance > 0) {
-          // Double the distance by moving the parent further away
-          const newX = grandParent.x + (dx / distance) * distance * 2;
-          const newY = grandParent.y + (dy / distance) * distance * 2;
+        // Normalize the direction vector
+        const dirX = dx / distance;
+        const dirY = dy / distance;
 
-          // Update the parent node position
-          setNodes((prev) =>
-            prev.map((node) =>
-              node.id === parentNode.id ? {...node, x: newX, y: newY} : node
-            )
-          );
+        // Calculate the perpendicular vector (both directions)
+        const perpX = -dirY;
+        const perpY = dirX;
 
-          console.log(
-            `Moved parent node ${parentNode.id} from (${parentNode.x}, ${parentNode.y}) to (${newX}, ${newY})`
-          );
+        // Move the parent node further away from its parent
+        const newX = parent.x + (dx / distance) * distance * 2;
+        const newY = parent.y + (dy / distance) * distance * 2;
 
-          // Update parentNode reference for the rest of the function
-          parentNode = {...parentNode, x: newX, y: newY};
+        // Update the parent node position
+        setNodes((prev) =>
+          prev.map((node: Node) =>
+            node.id === parentNode.id ? {...node, x: newX, y: newY} : node
+          )
+        );
+
+        // Update parentNode reference for the rest of the function
+        parentNode = {...parentNode, x: newX, y: newY};
+
+        // Generate 3 nodes in a 120-degree arc away from the parent
+        for (let i = 0; i < 3; i++) {
+          // Calculate angle for spreading nodes in a 120-degree arc
+          const spreadAngle = (Math.PI / 3) * (i - 2.5); // -60 to +60 degrees
+
+          // Rotate the perpendicular vector by spreadAngle
+          const rotatedX =
+            perpX * Math.cos(spreadAngle) - perpY * Math.sin(spreadAngle);
+          const rotatedY =
+            perpX * Math.sin(spreadAngle) + perpY * Math.cos(spreadAngle);
+
+          // Position the new node
+          const x = parentNode.x + rotatedX * radius;
+          const y = parentNode.y + rotatedY * radius;
+
+          const newNode: Node = {
+            id: `${parentNode.id}-${i}`,
+            x,
+            y,
+            text: `Node ${i + 1}`,
+            level: parentNode.level + 1,
+            parentId: parentNode.id,
+          };
+
+          newNodes.push(newNode);
+          newConnections.push({from: parentNode.id, to: newNode.id});
         }
       }
     }
 
-    for (let i = 0; i < 5; i++) {
-      const angle = i * angleStep;
-      const x = parentNode.x + Math.cos(angle) * radius;
-      const y = parentNode.y + Math.sin(angle) * radius;
-
-      const newNode: Node = {
-        id: `${parentNode.id}-${i}`,
-        x,
-        y,
-        text: `Node ${i + 1}`,
-        level: parentNode.level + 1,
-        parentId: parentNode.id,
-      };
-
-      newNodes.push(newNode);
-      newConnections.push({from: parentNode.id, to: newNode.id});
-
-      console.log(`Created node ${newNode.id} at (${x}, ${y})`);
-    }
-
     console.log(`Total nodes created: ${newNodes.length}`);
 
-    setNodes((prev) => [...prev, ...newNodes]);
+    setNodes((prev: Node[]) => [...prev, ...newNodes]);
     setConnections((prev) => [...prev, ...newConnections]);
 
     // Center the view on the parent node after adding new nodes
@@ -142,11 +193,11 @@ export default function NodesPage() {
 
     // Mark the node as clicked
     setNodes((prev) =>
-      prev.map((n) => (n.id === node.id ? {...n, isClicked: true} : n))
+      prev.map((n: Node) => (n.id === node.id ? {...n, isClicked: true} : n))
     );
 
     // Only generate new nodes if this node doesn't have children yet
-    const hasChildren = nodes.some((n) => n.parentId === node.id);
+    const hasChildren = nodes.some((n: Node) => n.parentId === node.id);
     if (!hasChildren) {
       generateNewNodes(node);
     }
@@ -210,7 +261,7 @@ export default function NodesPage() {
   const applyPhysics = () => {
     if (!isPhysicsEnabled) return;
 
-    setNodes((prevNodes) => {
+    setNodes((prevNodes: Node[]) => {
       const newNodes = [...prevNodes];
       const normalRepulsionForce = 50000; // Normal repulsion strength
       const parentRepulsionForce = 500000; // Much stronger repulsion for parent nodes
@@ -229,8 +280,12 @@ export default function NodesPage() {
           const distance = Math.sqrt(dx * dx + dy * dy);
 
           // Check if either node is a parent (has children)
-          const node1IsParent = prevNodes.some((n) => n.parentId === node1.id);
-          const node2IsParent = prevNodes.some((n) => n.parentId === node2.id);
+          const node1IsParent = prevNodes.some(
+            (n: Node) => n.parentId === node1.id
+          );
+          const node2IsParent = prevNodes.some(
+            (n: Node) => n.parentId === node2.id
+          );
           const bothAreParents = node1IsParent && node2IsParent;
 
           // Use different parameters for parent nodes
@@ -289,6 +344,61 @@ export default function NodesPage() {
       style={{position: "fixed", inset: 0, overflow: "hidden"}}
       className="bg-[#fff0d2]"
     >
+      {/* Burrow animation */}
+      {showBurrowAnimation && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
+          <div
+            className="text-[#000000] text-4xl font-bold"
+            style={{
+              animation: "burrowText 2s ease-in-out forwards",
+            }}
+          >
+            new rabbit hole discovered
+          </div>
+        </div>
+      )}
+
+      {/* Black overlay for fade effect */}
+      {holeAnimation === "zoom" && (
+        <div
+          className="fixed inset-0 bg-black z-30 pointer-events-none"
+          style={{
+            animation: "fadeIn 2s ease-in forwards",
+          }}
+        ></div>
+      )}
+
+      {/* Rabbit Hole */}
+      {showRabbitHole && (
+        <div className="fixed inset-0 flex items-center justify-center z-40 pointer-events-none">
+          <div
+            className="w-40 h-40 rounded-full"
+            style={{
+              background:
+                "radial-gradient(circle at center, #8B4513 0%, #654321 60%, #3D2B1F 100%)",
+              boxShadow: "inset 0 -8px 20px rgba(0,0,0,0.6)",
+              transform: "perspective(1000px) rotateX(60deg)",
+              animation: `${
+                holeAnimation === "appear"
+                  ? "holeAppear 0.5s ease-out forwards"
+                  : holeAnimation === "zoom"
+                  ? "holeZoom 2s ease-in forwards"
+                  : "none"
+              }`,
+            }}
+          ></div>
+        </div>
+      )}
+
+      {/* Control buttons */}
+      <div className="absolute top-4 right-4 z-10 flex gap-4">
+        <button
+          onClick={handleBurrow}
+          className="px-4 py-2 bg-[#1e00ff] text-[#fff0d2] rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 text-sm font-medium"
+        >
+          Burrow
+        </button>
+      </div>
       <div
         ref={containerRef}
         className="absolute inset-0 cursor-grab active:cursor-grabbing"
@@ -339,14 +449,55 @@ export default function NodesPage() {
       </div>
 
       <style jsx>{`
-        @keyframes nodeAppear {
+        @keyframes holeAppear {
+          0% {
+            transform: perspective(1000px) rotateX(60deg) scale(0);
+            opacity: 0;
+          }
+          100% {
+            transform: perspective(1000px) rotateX(60deg) scale(1);
+            opacity: 1;
+          }
+        }
+
+        @keyframes holeZoom {
+          0% {
+            transform: perspective(1000px) rotateX(60deg) scale(1);
+          }
+          100% {
+            transform: perspective(1000px) rotateX(0deg) scale(15);
+            opacity: 0;
+          }
+        }
+
+        @keyframes fadeIn {
           0% {
             opacity: 0;
-            transform: scale(0);
           }
           100% {
             opacity: 1;
-            transform: scale(1);
+          }
+        }
+
+        @keyframes burrowText {
+          0% {
+            opacity: 0;
+            transform: scale(0.5) translateY(20px);
+          }
+          20% {
+            opacity: 1;
+            transform: scale(1.1) translateY(0);
+          }
+          30% {
+            transform: scale(1) translateY(0);
+          }
+          80% {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+          }
+          100% {
+            opacity: 0;
+            transform: scale(0.9) translateY(-20px);
           }
         }
       `}</style>

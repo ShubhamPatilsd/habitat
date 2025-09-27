@@ -289,13 +289,6 @@ export default function NodesPage() {
       style={{position: "fixed", inset: 0, overflow: "hidden"}}
       className="bg-[#fff0d2]"
     >
-      {/* Physics toggle button */}
-      <button
-        onClick={() => setIsPhysicsEnabled(!isPhysicsEnabled)}
-        className="absolute top-4 right-4 z-10 px-4 py-2 bg-[#1e00ff] text-[#fff0d2] rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 text-sm font-medium"
-      >
-        Physics: {isPhysicsEnabled ? "ON" : "OFF"}
-      </button>
       <div
         ref={containerRef}
         className="absolute inset-0 cursor-grab active:cursor-grabbing"

@@ -60,87 +60,95 @@ export default function Home() {
       <div className="max-w-[600px]">
         <h1 className="text-[9rem] leading-none m-0">Habitat</h1>
         <p className="text-xl mt-4 ml-2">
-          It's a place where curiosity is nurtured,
+          It&apos;s a place where curiosity is nurtured,
           <br />
           Where you can explore new ideas, and
           <br />
           Rediscover the joy of discovery.
         </p>
-        <button 
+        <button
           onClick={handleTakeMeClick}
           className="hover:bg-[#1e00ff] hover:text-[#fff0d2] transition ml-2 mt-16 p-4 border-[#1e00ff] border-[1.5px] w-[60%] text-lg font-medium"
         >
           Take Me
         </button>
-        
+
         {/* Animated Gradient Line - only visible during scroll */}
-        <div 
+        <div
           className="w-2 mt-0 ml-[20%] relative z-[100]"
           style={{
-            height: animationState === 'idle' ? '0px' : `${Math.min(scrollProgress * 80, 80)}vh`,
-            background: animationState === 'idle' ? 'transparent' : 'linear-gradient(to bottom, #fff0d2, #1e00ff, #1e00ff)',
-            opacity: animationState === 'scrolling' ? 1 : 0,
-            transition: 'opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1)'
+            height:
+              animationState === "idle"
+                ? "0px"
+                : `${Math.min(scrollProgress * 80, 80)}vh`,
+            background:
+              animationState === "idle"
+                ? "transparent"
+                : "linear-gradient(to bottom, #fff0d2, #1e00ff, #1e00ff)",
+            opacity: animationState === "scrolling" ? 1 : 0,
+            transition: "opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1)",
           }}
         ></div>
-        
+
         {/* Spacer to create scrollable content */}
-        <div 
+        <div
           style={{
-            height: animationState === 'idle' ? '0px' : '100vh',
-            transition: 'none' // No transition for spacer - it follows the scroll directly
+            height: animationState === "idle" ? "0px" : "100vh",
+            transition: "none", // No transition for spacer - it follows the scroll directly
           }}
         ></div>
       </div>
 
       {/* 3D Plane at bottom of gradient */}
-      {animationState === 'plane3d' || animationState === 'diving' ? (
-        <div 
+      {animationState === "plane3d" || animationState === "diving" ? (
+        <div
           className={`fixed inset-0 transition-all duration-1000 ${
-            animationState === 'plane3d' ? 'opacity-100 scale-100 ease-in' : 
-            'opacity-100'
+            animationState === "plane3d"
+              ? "opacity-100 scale-100 ease-in"
+              : "opacity-100"
           }`}
           style={{
-            perspective: '1000px',
-            transformStyle: 'preserve-3d',
-            zIndex: 40
+            perspective: "1000px",
+            transformStyle: "preserve-3d",
+            zIndex: 40,
           }}
         >
-            <div 
-              className="bg-[#fff0d2] transition-all duration-1000"
-              style={{
-                background: 'linear-gradient(145deg, #fff0d2 0%, #fff0d2 60%, #f5e6c8 100%)',
-                transform: animationState === 'plane3d' ? 
-                  'rotateX(80deg) translateZ(50px) translateY(70vh) scale(0.7, 0.7) scaleX(1.4)' : 
-                  'rotateX(0deg) translateZ(0px) scale(3)',
-                transformOrigin: 'center center',
-                width: '800px',
-                height: '600px',
-                position: 'absolute',
-                left: '50%',
-                top: '50%',
-                marginLeft: '-400px',
-                marginTop: '-300px',
-                transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)'
-              }}
-            >
+          <div
+            className="bg-[#fff0d2] transition-all duration-1000"
+            style={{
+              background:
+                "linear-gradient(145deg, #fff0d2 0%, #fff0d2 60%, #f5e6c8 100%)",
+              transform:
+                animationState === "plane3d"
+                  ? "rotateX(80deg) translateZ(50px) translateY(70vh) scale(0.7, 0.7) scaleX(1.4)"
+                  : "rotateX(0deg) translateZ(0px) scale(3)",
+              transformOrigin: "center center",
+              width: "800px",
+              height: "600px",
+              position: "absolute",
+              left: "50%",
+              top: "50%",
+              marginLeft: "-400px",
+              marginTop: "-300px",
+              transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
+            }}
+          >
             {/* Plate texture */}
-            <div 
+            <div
               className="absolute inset-0 rounded-lg opacity-30"
               style={{
                 background: `
                   radial-gradient(circle at 30% 30%, rgba(255,255,255,0.2) 0%, transparent 50%),
                   linear-gradient(45deg, transparent 30%, rgba(0,0,0,0.05) 50%, transparent 70%)
-                `
+                `,
               }}
             ></div>
-            
+
             {/* Plate border */}
             <div className="absolute inset-0 rounded-lg border-4 border-[#1e00ff]"></div>
           </div>
         </div>
       ) : null}
-
     </div>
   );
 }

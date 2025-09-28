@@ -1079,8 +1079,15 @@ export default function NodesPage() {
       style={{ position: "fixed", inset: 0, overflow: "hidden" }}
       className="bg-[#fff0d2]"
     >
-      {/* Isometric 3D stack display with max 10 + underline current */}
+      {/* Habitat title */}
       <div className="fixed left-4 top-4 z-50">
+        <h1 className="text-4xl leading-none m-0 text-[#0114FF] font-semibold">
+          Habitat
+        </h1>
+      </div>
+
+      {/* Isometric 3D stack display with max 10 + underline current */}
+      <div className="fixed left-4 top-16 z-50">
         <svg
           width="260"
           height={Math.min(explorationPath.length, 10) * 80 + 100}

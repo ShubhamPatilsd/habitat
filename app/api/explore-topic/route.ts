@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateRelatedTopics } from "../../../mastra/agents/topic-generator";
+import { generateRelatedTopics } from "../../../server/agents/topic-generator";
 
 export async function POST(request: NextRequest) {
   try {

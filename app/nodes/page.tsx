@@ -379,27 +379,125 @@ export default function NodesPage() {
     };
   }, [isPhysicsEnabled]);
 
-  const handleTopicClick = (topic: string) => {
-    try {
-      localStorage.setItem(currTopic, JSON.stringify(nodes));
-    } catch (error) {
-      console.error("Failed to save nodes to local storage:", error);
-    }
+const handleTopicClick = (topic: string) => {
+  try {
+    // Save current topic state
+    localStorage.setItem(currTopic, JSON.stringify(nodes));
+  } catch (error) {
+    console.error("Failed to save nodes to local storage:", error);
+  }
 
-    try {
-      const savedNodesJson = localStorage.getItem(topic);
-      if (savedNodesJson) {
-        const foundNodes = JSON.parse(savedNodesJson) as Node[];
-        setNodes(foundNodes);
-        // Reset connections when loading new nodes
-        setConnections([]);
+  try {
+    const savedNodesJson = localStorage.getItem(topic);
+    if (savedNodesJson) {
+      const foundNodes = JSON.parse(savedNodesJson) as Node[];
+      setNodes(foundNodes);
+      setConnections([]);
+
+      // ✅ Reset zoom + center on root node after switching
+      setTimeout(() => {
+        if (foundNodes.length > 0) {
+          setZoom(1); // reset zoom
+          centerOnNode(foundNodes[0]); // center on root
+        }
+      }, 50);
+    }
+  } catch (error) {
+    console.error(`Failed to load nodes for topic ${topic}:`, error);
+  }
+
+  setCurrTopic(topic);
+};
+
+  // Smooth keyboard navigation (WASD + Arrow keys + zoom)
+  useEffect(() => {
+    const keysPressed = new Set<string>();
+    let animationFrameId: number;
+
+    const step = 10; // smaller step size per frame for smoothness
+
+    const move = () => {
+      setCanvasOffset((prev) => {
+        let { x, y } = prev;
+        if (
+          keysPressed.has("ArrowUp") ||
+          keysPressed.has("w") ||
+          keysPressed.has("W")
+        ) {
+          y += step;
+        }
+        if (
+          keysPressed.has("ArrowDown") ||
+          keysPressed.has("s") ||
+          keysPressed.has("S")
+        ) {
+          y -= step;
+        }
+        if (
+          keysPressed.has("ArrowLeft") ||
+          keysPressed.has("a") ||
+          keysPressed.has("A")
+        ) {
+          x += step;
+        }
+        if (
+          keysPressed.has("ArrowRight") ||
+          keysPressed.has("d") ||
+          keysPressed.has("D")
+        ) {
+          x -= step;
+        }
+        return { x, y };
+      });
+
+      animationFrameId = requestAnimationFrame(move);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      keysPressed.add(event.key);
+
+      // prevent browser scrolling with arrow keys
+      if (
+        ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " "].includes(
+          event.key
+        )
+      ) {
+        event.preventDefault();
       }
-    } catch (error) {
-      console.error(`Failed to load nodes for topic ${topic}:`, error);
-    }
 
-    setCurrTopic(topic);
-  };
+      // Zoom handling
+      if (event.key === "+" || event.key === "=") {
+        setZoom((prev) => Math.min(5, prev + 0.05));
+      }
+      if (event.key === "-") {
+        setZoom((prev) => Math.max(0.1, prev - 0.05));
+      }
+
+      // Start animation loop if not already running
+      if (!animationFrameId) {
+        animationFrameId = requestAnimationFrame(move);
+      }
+    };
+
+    const handleKeyUp = (event: KeyboardEvent) => {
+      keysPressed.delete(event.key);
+
+      // Stop animation if no keys are held
+      if (keysPressed.size === 0 && animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = 0;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
+    };
+  }, []);
 
   return (
     <div
@@ -493,7 +591,7 @@ export default function NodesPage() {
           onClick={handleResetView}
           className="px-4 py-2 bg-gray-700 text-white rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 text-sm font-medium"
         >
-          Reset View
+          Reset Original
         </button>
         <button
           onClick={handleResetPrevious}

@@ -30,11 +30,6 @@ export default function NodesPage() {
   const [lastOffset, setLastOffset] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [isPhysicsEnabled, setIsPhysicsEnabled] = useState(true);
-  const [showBurrowAnimation, setShowBurrowAnimation] = useState(false);
-  const [showRabbitHole, setShowRabbitHole] = useState(false);
-  const [holeAnimation, setHoleAnimation] = useState<
-    "appear" | "zoom" | "done"
-  >("appear");
   const [topics, setTopics] = useState<string[]>(["next1"]);
   const [currTopic, setCurrTopic] = useState<string>("next1");
   const containerRef = useRef<HTMLDivElement>(null);
@@ -58,51 +53,54 @@ export default function NodesPage() {
       setCanvasOffset({ x: offsetX, y: offsetY });
     }
   };
+  const handleResetView = () => {
+    const resetZoom = 1;
+    setZoom(resetZoom);
+
+    if (containerRef.current && nodes.length > 0) {
+      const node = nodes[0];
+      const centerX = containerRef.current.clientWidth / 2;
+      const centerY = containerRef.current.clientHeight / 2;
+
+      const offsetX = centerX - node.x * resetZoom;
+      const offsetY = centerY - node.y * resetZoom;
+
+      setCanvasOffset({ x: offsetX, y: offsetY });
+    }
+  };
+
+  const handleResetPrevious = () => {
+    if (containerRef.current && nodes.length > 1) {
+      const latestNode = nodes[nodes.length - 1]; // ✅ last created node
+      const resetZoom = 1;
+
+      setZoom(resetZoom);
+
+      const centerX = containerRef.current.clientWidth / 2;
+      const centerY = containerRef.current.clientHeight / 2;
+
+      const offsetX = centerX - latestNode.x * resetZoom;
+      const offsetY = centerY - latestNode.y * resetZoom;
+
+      setCanvasOffset({ x: offsetX, y: offsetY });
+    }
+  };
 
   const handleBurrow = () => {
     try {
       localStorage.setItem(currTopic, JSON.stringify(nodes));
-      console.log(currTopic);
     } catch (error) {
       console.error("Failed to save nodes to local storage:", error);
-      console.log("fail");
     }
 
-    setShowBurrowAnimation(true);
-    setTimeout(() => {
-      setShowBurrowAnimation(false);
-      setShowRabbitHole(true);
-      setHoleAnimation("appear");
-
-      // Start zoom animation after 1 second
-      setTimeout(() => {
-        setHoleAnimation("zoom");
-
-        // Hide the hole after zoom animation completes
-        setTimeout(() => {
-          setHoleAnimation("done");
-          setShowRabbitHole(false);
-          // Clear the nodes array after the animation is complete
-          setNodes([
-            {
-              id: "root",
-              x: 1000,
-              y: 1000,
-              text: "Start",
-              level: 0,
-            },
-          ]);
-          // Also clear connections
-          setConnections([]);
-          centerOnNode(nodes[0]);
-        }, 2000);
-      }, 1000);
-    }, 2000);
-
-    //set topic
+    // ✅ just update topics & reset canvas
     setTopics((prev) => [...prev, `next${prev.length + 1}`]);
     setCurrTopic("next" + (topics.length + 1));
-    console.log(currTopic);
+
+    // reset graph
+    setNodes([{ id: "root", x: 1000, y: 1000, text: "Start", level: 0 }]);
+    setConnections([]);
+    centerOnNode({ id: "root", x: 1000, y: 1000, text: "Start", level: 0 });
   };
 
   // Center the canvas on the starting node when component mounts
@@ -478,61 +476,28 @@ export default function NodesPage() {
         </svg>
       </div>
 
-      {/* Burrow animation */}
-      {showBurrowAnimation && (
-        <div className="fixed inset-0 flex flex-col items-center justify-center z-50 pointer-events-none">
-          <div
-            className="text-[#000000] text-4xl font-bold mt-30"
-            style={{
-              animation: "burrowText 2s ease-in-out forwards",
-            }}
-          >
-            new rabbit hole discovered
-          </div>
-        </div>
-      )}
-
-      {/* Black overlay for fade effect */}
-      {holeAnimation === "zoom" && (
-        <div
-          className="fixed inset-0 bg-black z-30 pointer-events-none"
-          style={{
-            animation: "fadeIn 2s ease-in forwards",
-          }}
-        ></div>
-      )}
-
-      {/* Rabbit Hole */}
-      {showRabbitHole && (
-        <div className="fixed inset-0 flex items-center justify-center z-40 pointer-events-none">
-          <div
-            className="w-40 h-40 rounded-full"
-            style={{
-              background:
-                "radial-gradient(circle at center, #8B4513 0%, #654321 60%, #3D2B1F 100%)",
-              boxShadow: "inset 0 -8px 20px rgba(0,0,0,0.6)",
-              transform: "perspective(1000px) rotateX(60deg)",
-              animation: `${
-                holeAnimation === "appear"
-                  ? "holeAppear 0.5s ease-out forwards"
-                  : holeAnimation === "zoom"
-                    ? "holeZoom 2s ease-in forwards"
-                    : "none"
-              }`,
-            }}
-          ></div>
-        </div>
-      )}
-
       {/* Control buttons */}
-      <div className="absolute top-4 right-4 z-10 flex gap-4">
+      <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
         <button
           onClick={handleBurrow}
           className="px-4 py-2 bg-[#1e00ff] text-[#fff0d2] rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 text-sm font-medium"
         >
           Burrow
         </button>
+        <button
+          onClick={handleResetView}
+          className="px-4 py-2 bg-gray-700 text-white rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 text-sm font-medium"
+        >
+          Reset View
+        </button>
+        <button
+          onClick={handleResetPrevious}
+          className="px-4 py-2 bg-gray-500 text-white rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 text-sm font-medium"
+        >
+          Reset Previous
+        </button>
       </div>
+
       <div
         ref={containerRef}
         className="absolute inset-0 cursor-grab active:cursor-grabbing"
@@ -599,59 +564,6 @@ export default function NodesPage() {
         </div>
       </div>
 
-      <style jsx>{`
-        @keyframes holeAppear {
-          0% {
-            transform: perspective(1000px) rotateX(60deg) scale(0);
-            opacity: 0;
-          }
-          100% {
-            transform: perspective(1000px) rotateX(60deg) scale(1);
-            opacity: 1;
-          }
-        }
-
-        @keyframes holeZoom {
-          0% {
-            transform: perspective(1000px) rotateX(60deg) scale(1);
-          }
-          100% {
-            transform: perspective(1000px) rotateX(0deg) scale(15);
-            opacity: 1;
-          }
-        }
-
-        @keyframes fadeIn {
-          0% {
-            opacity: 0;
-          }
-          100% {
-            opacity: 1;
-          }
-        }
-
-        @keyframes burrowText {
-          0% {
-            opacity: 0;
-            transform: scale(0.5) translateY(20px);
-          }
-          20% {
-            opacity: 1;
-            transform: scale(1.1) translateY(0);
-          }
-          30% {
-            transform: scale(1) translateY(0);
-          }
-          80% {
-            opacity: 1;
-            transform: scale(1) translateY(0);
-          }
-          100% {
-            opacity: 0;
-            transform: scale(0.9) translateY(-20px);
-          }
-        }
-      `}</style>
       {/* Hover popup */}
       {showPopup && hoveredNode && (
         <div

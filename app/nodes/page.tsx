@@ -12,18 +12,66 @@ interface Node {
 }
 
 export default function NodesPage() {
-  const [nodes, setNodes] = useState<Node[]>([
-    {
+  const exploreTopics = async (topic: string): Promise<string[]> => {
+    console.log('Fetching topics for:', topic);
+    try {
+      const response = await fetch('/api/explore-topic', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ topic }),
+      });
+      
+      console.log('API Response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('API Error:', errorText);
+        throw new Error(`Failed to fetch related topics: ${errorText}`);
+      }
+      
+      const data = await response.json();
+      console.log('API Response data:', data);
+      console.log('API response:', data);
+      if (!data.topics || !Array.isArray(data.topics)) {
+        console.error('Invalid response format:', data);
+        return [];
+      }
+      return data.topics;
+    } catch (error) {
+      console.error('Error exploring topics:', error);
+      return [];
+    }
+  };
+
+  const [nodes, setNodes] = useState<Node[]>(() => {
+    if (typeof window !== 'undefined') {
+      const savedNodes = localStorage.getItem('nodes');
+      return savedNodes ? JSON.parse(savedNodes) : [{
+        id: "root",
+        x: 1000,
+        y: 1000,
+        text: "Artificial Intelligence",
+        level: 0,
+      }];
+    }
+    return [{
       id: "root",
       x: 1000,
       y: 1000,
-      text: "Start",
+      text: "Artificial Intelligence",
       level: 0,
-    },
-  ]);
-  const [connections, setConnections] = useState<{from: string; to: string}[]>(
-    []
-  );
+    }];
+  });
+
+  const [connections, setConnections] = useState<{from: string; to: string}[]>(() => {
+    if (typeof window !== 'undefined') {
+      const savedConnections = localStorage.getItem('connections');
+      return savedConnections ? JSON.parse(savedConnections) : [];
+    }
+    return [];
+  });
   const [canvasOffset, setCanvasOffset] = useState({x: 0, y: 0});
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({x: 0, y: 0});
@@ -35,6 +83,8 @@ export default function NodesPage() {
   const [holeAnimation, setHoleAnimation] = useState<
     "appear" | "zoom" | "done"
   >("appear");
+  const [loadingNode, setLoadingNode] = useState<string | null>(null);
+  const [errorNode, setErrorNode] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<number | null>(null);
 
@@ -88,7 +138,19 @@ export default function NodesPage() {
     };
   }, []);
 
-  const generateNewNodes = (parentNode: Node) => {
+  const generateNewNodes = async (parentNode: Node) => {
+    console.log('Generating new nodes for:', parentNode.text);
+    setLoadingNode(parentNode.id);
+    try {
+      // Get related topics from the API
+      const relatedTopics = await exploreTopics(parentNode.text);
+      console.log('Received topics:', relatedTopics);
+      
+      if (!relatedTopics || relatedTopics.length === 0) {
+        console.error('No related topics found for:', parentNode.text);
+        return;
+      }
+
     const newNodes: Node[] = [];
     const newConnections: {from: string; to: string}[] = [];
     const radius = 300; // Base radius for spacing
@@ -100,7 +162,8 @@ export default function NodesPage() {
       // For root node, generate 5 nodes in a full circle
       const angleStep = (2 * Math.PI) / 5;
 
-      for (let i = 0; i < 5; i++) {
+      const numTopics = Math.min(relatedTopics.length, 5);
+      for (let i = 0; i < numTopics; i++) {
         const angle = i * angleStep;
         const x = parentNode.x + Math.cos(angle) * radius;
         const y = parentNode.y + Math.sin(angle) * radius;
@@ -109,7 +172,7 @@ export default function NodesPage() {
           id: `${parentNode.id}-${i}`,
           x,
           y,
-          text: `Node ${i + 1}`,
+          text: relatedTopics[i],
           level: parentNode.level + 1,
           parentId: parentNode.id,
         };
@@ -148,8 +211,9 @@ export default function NodesPage() {
         // Update parentNode reference for the rest of the function
         parentNode = {...parentNode, x: newX, y: newY};
 
-        // Generate 3 nodes in a 120-degree arc away from the parent
-        for (let i = 0; i < 3; i++) {
+        // Generate nodes based on available topics in a 120-degree arc
+        const numTopics = Math.min(relatedTopics.length, 3);
+        for (let i = 0; i < numTopics; i++) {
           // Calculate angle for spreading nodes in a 120-degree arc
           const spreadAngle = (Math.PI / 3) * (i - 2.5); // -60 to +60 degrees
 
@@ -167,7 +231,7 @@ export default function NodesPage() {
             id: `${parentNode.id}-${i}`,
             x,
             y,
-            text: `Node ${i + 1}`,
+            text: relatedTopics[i],
             level: parentNode.level + 1,
             parentId: parentNode.id,
           };
@@ -185,11 +249,26 @@ export default function NodesPage() {
 
     // Center the view on the parent node after adding new nodes
     setTimeout(() => centerOnNode(parentNode), 100);
+  } catch (error) {
+    console.error('Error generating nodes:', error);
+  } finally {
+    setLoadingNode(null);
+  }
   };
 
-  const handleNodeClick = (node: Node, event: React.MouseEvent) => {
+    const handleNodeClick = async (node: Node, event: React.MouseEvent) => {
+    console.log('Node clicked:', node.text);
     // Prevent node click when dragging
-    if (isDragging) return;
+    if (isDragging) {
+      console.log('Click ignored - dragging');
+      return;
+    }
+
+    // Check if node is already loading
+    if (loadingNode === node.id) {
+      console.log('Node is already loading, ignoring click');
+      return;
+    }
 
     // Mark the node as clicked
     setNodes((prev) =>
@@ -197,9 +276,14 @@ export default function NodesPage() {
     );
 
     // Only generate new nodes if this node doesn't have children yet
-    const hasChildren = nodes.some((n: Node) => n.parentId === node.id);
+    const hasChildren = connections.some((conn) => conn.from === node.id);
+    console.log('Has children:', hasChildren);
+    
     if (!hasChildren) {
-      generateNewNodes(node);
+      console.log('Generating new nodes for:', node.text);
+      await generateNewNodes(node);
+    } else {
+      console.log('Node already has children, skipping generation');
     }
   };
 
@@ -435,7 +519,7 @@ export default function NodesPage() {
               <div
                 className={`w-16 h-16 rounded-full text-[#fff0d2] flex items-center justify-center text-sm font-medium shadow-lg hover:shadow-xl transition-all duration-300 ${
                   node.isClicked ? "bg-[#D2B48C]" : "bg-[#1e00ff]"
-                }`}
+                } ${loadingNode === node.id ? 'animate-pulse' : ''}`}
                 style={{
                   animation:
                     node.level === 0 ? "none" : "nodeAppear 0.5s ease-out",

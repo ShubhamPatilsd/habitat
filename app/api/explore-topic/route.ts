@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateRelatedTopics } from "../../../server/agents/topic-generator";
+import {
+  generateEnhancedTopics,
+  getRichSummary,
+} from "../../../server/agents/enhanced-topic-generator";
 
 export async function POST(request: NextRequest) {
   console.log("Received topic exploration request");
@@ -18,7 +21,7 @@ export async function POST(request: NextRequest) {
         ? `\n\nUser's exploration journey so far: ${journey.join(" → ")}`
         : "";
 
-    const topicsWithDescriptions = await generateRelatedTopics(
+    const topicsWithDescriptions = await generateEnhancedTopics(
       topic,
       journeyContext,
       count
@@ -26,7 +29,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      topics: topicsWithDescriptions, // Return full objects with title and description
+      topics: topicsWithDescriptions, // Return full objects with title, description, and rich content
     });
   } catch (error) {
     console.error("Error generating topics:", error);

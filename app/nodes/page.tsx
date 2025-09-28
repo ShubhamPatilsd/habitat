@@ -6,6 +6,7 @@ interface Node {
   y: number;
   text: string;
   description?: string; // Add description field
+  richContent?: any; // Add rich content field
   level: number;
   parentId?: string;
   isClicked?: boolean;
@@ -13,16 +14,57 @@ interface Node {
   isBurrowed?: boolean; // Track burrowed nodes
 }
 export default function NodesPage() {
+  const [nodeIdCounter, setNodeIdCounter] = useState(6); // Counter for unique IDs (start from 6 since we have 5 initial nodes)
   const [nodes, setNodes] = useState<Node[]>([
     {
-      id: "root",
+      id: "node-1",
+      x: 800,
+      y: 800,
+      text: "Quantum Physics",
+      description:
+        "The branch of physics that deals with the behavior of matter and energy at the atomic and subatomic level.",
+      level: 0,
+      isCurrentNode: false,
+    },
+    {
+      id: "node-2",
+      x: 1200,
+      y: 800,
+      text: "Ancient History",
+      description:
+        "The study of human civilization from the earliest recorded periods to the fall of ancient empires.",
+      level: 0,
+      isCurrentNode: false,
+    },
+    {
+      id: "node-3",
+      x: 800,
+      y: 1200,
+      text: "Culinary Arts",
+      description:
+        "The art and science of preparing, cooking, and presenting food in creative and delicious ways.",
+      level: 0,
+      isCurrentNode: false,
+    },
+    {
+      id: "node-4",
+      x: 1200,
+      y: 1200,
+      text: "Space Exploration",
+      description:
+        "The ongoing discovery and exploration of celestial structures in outer space by means of evolving technology.",
+      level: 0,
+      isCurrentNode: false,
+    },
+    {
+      id: "node-5",
       x: 1000,
       y: 1000,
-      text: "Artificial Intelligence",
+      text: "Music Theory",
       description:
-        "The simulation of human intelligence in machines that are programmed to think and learn like humans.",
+        "The study of the practices and possibilities of music, including harmony, rhythm, and composition.",
       level: 0,
-      isCurrentNode: false, // Changed: Start node is blue, not current
+      isCurrentNode: false,
     },
   ]);
   const [connections, setConnections] = useState<
@@ -114,33 +156,73 @@ export default function NodesPage() {
     // ✅ just update topics & reset canvas
     setTopics((prev) => [...prev, `next${prev.length + 1}`]);
     setCurrTopic("next" + (topics.length + 1));
-    // reset graph - start node is blue, not current
+    // reset graph - start with 5 diverse topics
     setNodes([
       {
-        id: "root",
+        id: "node-1",
+        x: 800,
+        y: 800,
+        text: "Quantum Physics",
+        description:
+          "The branch of physics that deals with the behavior of matter and energy at the atomic and subatomic level.",
+        level: 0,
+        isCurrentNode: false,
+      },
+      {
+        id: "node-2",
+        x: 1200,
+        y: 800,
+        text: "Ancient History",
+        description:
+          "The study of human civilization from the earliest recorded periods to the fall of ancient empires.",
+        level: 0,
+        isCurrentNode: false,
+      },
+      {
+        id: "node-3",
+        x: 800,
+        y: 1200,
+        text: "Culinary Arts",
+        description:
+          "The art and science of preparing, cooking, and presenting food in creative and delicious ways.",
+        level: 0,
+        isCurrentNode: false,
+      },
+      {
+        id: "node-4",
+        x: 1200,
+        y: 1200,
+        text: "Space Exploration",
+        description:
+          "The ongoing discovery and exploration of celestial structures in outer space by means of evolving technology.",
+        level: 0,
+        isCurrentNode: false,
+      },
+      {
+        id: "node-5",
         x: 1000,
         y: 1000,
-        text: "Artificial Intelligence",
+        text: "Music Theory",
         description:
-          "The simulation of human intelligence in machines that are programmed to think and learn like humans.",
+          "The study of the practices and possibilities of music, including harmony, rhythm, and composition.",
         level: 0,
         isCurrentNode: false,
       },
     ]);
     setConnections([]);
     centerOnNode({
-      id: "root",
+      id: "node-5",
       x: 1000,
       y: 1000,
-      text: "Artificial Intelligence",
+      text: "Music Theory",
       description:
-        "The simulation of human intelligence in machines that are programmed to think and learn like humans.",
+        "The study of the practices and possibilities of music, including harmony, rhythm, and composition.",
       level: 0,
     });
   };
-  // Center the canvas on the starting node when component mounts
+  // Center the canvas on the middle node when component mounts
   useEffect(() => {
-    const centerCanvas = () => centerOnNode(nodes[0]);
+    const centerCanvas = () => centerOnNode(nodes[4]); // Center on node-5 (Music Theory)
     // Center with a small delay to ensure container is rendered
     const timeoutId = setTimeout(centerCanvas, 100);
     // Also center on window resize
@@ -150,11 +232,38 @@ export default function NodesPage() {
       window.removeEventListener("resize", centerCanvas);
     };
   }, []);
+
+  // Function to fetch rich summary for a node
+  const fetchRichSummary = async (node: Node) => {
+    try {
+      const response = await fetch("/api/get-summary", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          topic: node.text,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.summary) {
+          // Update the node with the rich summary
+          setNodes((prevNodes) =>
+            prevNodes.map((n) =>
+              n.id === node.id ? { ...n, description: data.summary } : n
+            )
+          );
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching rich summary:", error);
+    }
+  };
+
   const generateNewNodes = async (parentNode: Node) => {
     setIsGenerating(true);
-    const newNodes: Node[] = [];
-    const newConnections: { from: string; to: string }[] = [];
-    const radius = 400; // Base radius for spacing (increased for bigger circles)
 
     // Generate topics from API with journey context
     let topics: Array<{ title: string; description: string }> = [];
@@ -175,8 +284,7 @@ export default function NodesPage() {
         body: JSON.stringify({
           topic: parentNode.text,
           journey: journeyPath,
-          // Request fewer topics for faster generation
-          count: 3,
+          count: 5, // ALWAYS 5 topics
         }),
       });
 
@@ -185,121 +293,152 @@ export default function NodesPage() {
         topics = data.topics || [];
       } else {
         console.error("Failed to generate topics:", response.statusText);
-        // Fallback to generic topics
-        topics = [
-          {
-            title: "Related Topic 1",
-            description: "A related concept to explore further.",
-          },
-          {
-            title: "Related Topic 2",
-            description: "Another interesting area to investigate.",
-          },
-          {
-            title: "Related Topic 3",
-            description: "A third pathway for exploration.",
-          },
-        ];
       }
     } catch (error) {
       console.error("Error generating topics:", error);
-      // Fallback to generic topics
-      topics = [
-        {
-          title: "Related Topic 1",
-          description: "A related concept to explore further.",
-        },
-        {
-          title: "Related Topic 2",
-          description: "Another interesting area to investigate.",
-        },
-        {
-          title: "Related Topic 3",
-          description: "A third pathway for exploration.",
-        },
-      ];
     }
 
-    // Determine if this is the root node (no parent)
-    const isRootNode = !parentNode.parentId;
-    if (isRootNode) {
-      // For root node, generate 5 nodes in a full circle
-      const angleStep = (2 * Math.PI) / 5;
-      for (let i = 0; i < 5; i++) {
-        const angle = i * angleStep;
-        const x = parentNode.x + Math.cos(angle) * radius;
-        const y = parentNode.y + Math.sin(angle) * radius;
-        const newNode: Node = {
-          id: `${parentNode.id}-${i}`,
-          x,
-          y,
-          text: topics[i]?.title || `Topic ${i + 1}`,
-          description:
-            topics[i]?.description || `A related concept to explore further.`,
-          level: parentNode.level + 1,
-          parentId: parentNode.id,
-        };
-        newNodes.push(newNode);
-        newConnections.push({ from: parentNode.id, to: newNode.id });
-      }
-    } else {
-      // For non-root nodes, first find the direction to the parent
-      const parent = nodes.find((n: Node) => n.id === parentNode.parentId);
-      if (parent) {
-        // Calculate direction from parent to current node
-        const dx = parentNode.x - parent.x;
-        const dy = parentNode.y - parent.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        // Normalize the direction vector
-        const dirX = dx / distance;
-        const dirY = dy / distance;
-        // Calculate the perpendicular vector (both directions)
-        const perpX = -dirY;
-        const perpY = dirX;
-        // Move the parent node further away from its parent
-        const newX = parent.x + (dx / distance) * distance * 2;
-        const newY = parent.y + (dy / distance) * distance * 2;
-        // Update the parent node position
-        setNodes((prev) =>
-          prev.map((node: Node) =>
-            node.id === parentNode.id ? { ...node, x: newX, y: newY } : node
-          )
-        );
-        // Update parentNode reference for the rest of the function
-        parentNode = { ...parentNode, x: newX, y: newY };
-        // Generate 3 nodes in a 120-degree arc away from the parent
-        for (let i = 0; i < 3; i++) {
-          // Calculate angle for spreading nodes in a 120-degree arc
-          const spreadAngle = (Math.PI / 3) * (i - 2.5); // -60 to +60 degrees
-          // Rotate the perpendicular vector by spreadAngle
-          const rotatedX =
-            perpX * Math.cos(spreadAngle) - perpY * Math.sin(spreadAngle);
-          const rotatedY =
-            perpX * Math.sin(spreadAngle) + perpY * Math.cos(spreadAngle);
-          // Position the new node
-          const x = parentNode.x + rotatedX * radius;
-          const y = parentNode.y + rotatedY * radius;
-          const newNode: Node = {
-            id: `${parentNode.id}-${i}`,
-            x,
-            y,
-            text: topics[i]?.title || `Topic ${i + 1}`,
-            description:
-              topics[i]?.description || `A related concept to explore further.`,
-            level: parentNode.level + 1,
-            parentId: parentNode.id,
-          };
-          newNodes.push(newNode);
-          newConnections.push({ from: parentNode.id, to: newNode.id });
-        }
-      }
+    // Ensure we always have exactly 5 topics
+    while (topics.length < 5) {
+      const fallbackTitles = [
+        "Research",
+        "Applications",
+        "History",
+        "Future",
+        "Theory",
+      ];
+      const fallbackDescriptions = [
+        "The systematic investigation of a subject to discover new information",
+        "Practical uses and implementations of theoretical concepts",
+        "The chronological record of past events and developments",
+        "Upcoming trends, technologies, and potential developments",
+        "The fundamental principles and frameworks underlying a field",
+      ];
+      topics.push({
+        title: fallbackTitles[topics.length] || `Topic ${topics.length + 1}`,
+        description:
+          fallbackDescriptions[topics.length] ||
+          "A related concept in this field.",
+      });
     }
-    // console.log(`Total nodes created: ${newNodes.length}`);
+
+    // ORGANIZED LAYOUT SYSTEM
+    const newNodes: Node[] = [];
+    const newConnections: { from: string; to: string }[] = [];
+
+    // Perfect spacing constants - CLUSTERED around parent
+    const BASE_RADIUS = 250; // Closer to parent for better clustering
+    const MIN_DISTANCE = 150; // Minimum distance between any two nodes
+
+    // Get all existing node positions for collision detection
+    const existingPositions = nodes.map((n) => ({ x: n.x, y: n.y }));
+
+    // Calculate optimal positions for 5 nodes in a perfect pentagon
+    const positions = calculateOptimalPositions(
+      parentNode.x,
+      parentNode.y,
+      BASE_RADIUS,
+      existingPositions,
+      MIN_DISTANCE
+    );
+
+    // Create exactly 5 nodes with perfect positioning
+    for (let i = 0; i < 5; i++) {
+      const position = positions[i];
+      const newNode: Node = {
+        id: `node-${nodeIdCounter + i}`,
+        x: position.x,
+        y: position.y,
+        text: topics[i]?.title || `Topic ${i + 1}`,
+        description:
+          topics[i]?.description || `A related concept to explore further.`,
+        richContent: topics[i]?.richContent,
+        level: parentNode.level + 1,
+        parentId: parentNode.id,
+        isClicked: false,
+        isCurrentNode: false,
+        isBurrowed: false,
+      };
+      newNodes.push(newNode);
+      newConnections.push({ from: parentNode.id, to: newNode.id });
+    }
+
+    // Update state
     setNodes((prev: Node[]) => [...prev, ...newNodes]);
     setConnections((prev) => [...prev, ...newConnections]);
-    // Center the view on the parent node after adding new nodes
+    setNodeIdCounter((prev) => prev + 5); // Always increment by 5
+
+    // Center the view on the parent node
     setTimeout(() => centerOnNode(parentNode), 100);
     setIsGenerating(false);
+  };
+
+  // PERFECT POSITIONING ALGORITHM
+  const calculateOptimalPositions = (
+    centerX: number,
+    centerY: number,
+    radius: number,
+    existingPositions: { x: number; y: number }[],
+    minDistance: number
+  ): { x: number; y: number }[] => {
+    const positions: { x: number; y: number }[] = [];
+
+    // Start with a perfect pentagon (5 points)
+    const pentagonAngles = [0, 72, 144, 216, 288].map(
+      (deg) => (deg * Math.PI) / 180
+    );
+
+    for (let i = 0; i < 5; i++) {
+      let bestPosition = {
+        x: centerX + Math.cos(pentagonAngles[i]) * radius,
+        y: centerY + Math.sin(pentagonAngles[i]) * radius,
+      };
+
+      // Check for collisions and adjust if needed
+      let attempts = 0;
+      while (attempts < 10) {
+        let hasCollision = false;
+
+        // Check against existing positions
+        for (const existing of existingPositions) {
+          const distance = Math.sqrt(
+            Math.pow(bestPosition.x - existing.x, 2) +
+              Math.pow(bestPosition.y - existing.y, 2)
+          );
+          if (distance < minDistance) {
+            hasCollision = true;
+            break;
+          }
+        }
+
+        // Check against already calculated positions
+        for (const pos of positions) {
+          const distance = Math.sqrt(
+            Math.pow(bestPosition.x - pos.x, 2) +
+              Math.pow(bestPosition.y - pos.y, 2)
+          );
+          if (distance < minDistance) {
+            hasCollision = true;
+            break;
+          }
+        }
+
+        if (!hasCollision) break;
+
+        // Adjust position by moving slightly outward and rotating
+        const adjustmentAngle = attempts * 0.5 + pentagonAngles[i];
+        const adjustmentRadius = radius + attempts * 50;
+        bestPosition = {
+          x: centerX + Math.cos(adjustmentAngle) * adjustmentRadius,
+          y: centerY + Math.sin(adjustmentAngle) * adjustmentRadius,
+        };
+        attempts++;
+      }
+
+      positions.push(bestPosition);
+    }
+
+    return positions;
   };
   const handleNodeClick = async (node: Node, event: React.MouseEvent) => {
     if (isDragging) return;
@@ -323,6 +462,9 @@ export default function NodesPage() {
           }))
         );
       }
+      // Fetch rich summary for the clicked node
+      await fetchRichSummary(node);
+
       // Generate children if they don't exist
       const hasChildren = nodes.some((n) => n.parentId === node.id);
       if (!hasChildren) {
@@ -555,7 +697,7 @@ export default function NodesPage() {
     } else if (node.isClicked) {
       return { backgroundColor: "#808080" }; // Grey for previously visited nodes
     } else {
-      return { backgroundColor: "#1e00ff" }; // Blue for unvisited nodes
+      return { backgroundColor: "#0114FF" }; // Blue for unvisited nodes
     }
   };
   // Smooth keyboard navigation (WASD + Arrow keys + zoom)
@@ -774,6 +916,32 @@ export default function NodesPage() {
             transition: "transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)",
           }}
         >
+          {/* Render connections */}
+          <svg
+            className="absolute inset-0 pointer-events-none"
+            style={{ width: "200vw", height: "200vh" }}
+          >
+            {connections.map((connection, index) => {
+              const fromNode = nodes.find((n) => n.id === connection.from);
+              const toNode = nodes.find((n) => n.id === connection.to);
+
+              if (!fromNode || !toNode) return null;
+
+              return (
+                <line
+                  key={index}
+                  x1={fromNode.x}
+                  y1={fromNode.y}
+                  x2={toNode.x}
+                  y2={toNode.y}
+                  stroke="#0114FF"
+                  strokeWidth="2"
+                  opacity="0.8"
+                />
+              );
+            })}
+          </svg>
+
           {/* Render nodes */}
           {nodes.map((node) => (
             <div
@@ -788,7 +956,7 @@ export default function NodesPage() {
               onMouseLeave={handleNodeMouseLeave}
             >
               <div
-                className="w-24 h-24 rounded-full text-[#fff0d2] flex items-center justify-center text-sm font-medium shadow-lg hover:shadow-xl transition-all duration-300 relative overflow-hidden"
+                className="w-24 h-24 rounded-full text-[#fff0d2] flex items-center justify-center text-sm font-bold shadow-lg hover:shadow-xl transition-all duration-300 relative overflow-hidden"
                 style={{
                   ...getNodeStyle(node),
                   animation:
@@ -860,26 +1028,36 @@ export default function NodesPage() {
           }}
         >
           <div
-            className="relative h-[max(11vw,132px)] w-full overflow-hidden rounded-2xl"
+            className="relative h-[max(11vw,132px)] w-full overflow-hidden rounded-2xl border-2"
             style={{
-              backgroundImage: hoveredNode.isCurrentNode
-                ? "linear-gradient(135deg, #D2B48C 0%, #DEB887 50%, #F5DEB3 100%)"
+              backgroundColor: hoveredNode.isCurrentNode
+                ? "#D2B48C"
                 : hoveredNode.isClicked
-                ? "linear-gradient(135deg, #808080 0%, #A0A0A0 50%, #C0C0C0 100%)"
-                : "linear-gradient(135deg, #1e00ff 0%, #4a90e2 50%, #87ceeb 100%)",
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-              backgroundRepeat: "no-repeat",
+                ? "#808080"
+                : "#fff0d2",
+              borderColor: hoveredNode.isCurrentNode
+                ? "#D2B48C"
+                : hoveredNode.isClicked
+                ? "#808080"
+                : "#0114FF",
             }}
             role="img"
             aria-label={hoveredNode.text}
           >
-            <div className="absolute inset-0 bg-black bg-opacity-20"></div>
-            <div className="relative z-10 p-4 h-full flex flex-col justify-center text-white">
-              <h3 className="font-semibold text-lg truncate mb-1">
+            <div
+              className="relative z-10 p-4 h-full flex flex-col justify-center"
+              style={{
+                color: hoveredNode.isCurrentNode
+                  ? "#fff0d2"
+                  : hoveredNode.isClicked
+                  ? "#fff0d2"
+                  : "#0114FF",
+              }}
+            >
+              <h3 className="font-bold text-2xl truncate mb-2">
                 {hoveredNode.text}
               </h3>
-              <p className="text-xs opacity-90 mb-2">
+              <p className="text-sm font-medium opacity-90 mb-3">
                 Level {hoveredNode.level} •{" "}
                 {hoveredNode.isCurrentNode
                   ? "Current"
@@ -887,7 +1065,7 @@ export default function NodesPage() {
                   ? "Visited"
                   : "Unvisited"}
               </p>
-              <p className="text-xs opacity-80 leading-tight">
+              <p className="text-base opacity-90 leading-relaxed">
                 {hoveredNode.description || "No description available."}
               </p>
             </div>

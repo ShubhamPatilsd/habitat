@@ -7,8 +7,20 @@ import {
 export async function POST(request: NextRequest) {
   console.log("Received topic exploration request");
   try {
-    const { topic, journey = [], count = 3 } = await request.json();
-    console.log("Processing topic:", topic, "with journey:", journey);
+    const {
+      topic,
+      journey = [],
+      count = 3,
+      usedTopics = [],
+    } = await request.json();
+    console.log(
+      "Processing topic:",
+      topic,
+      "with journey:",
+      journey,
+      "avoiding:",
+      usedTopics
+    );
 
     if (!topic) {
       console.error("No topic provided in request");
@@ -24,7 +36,8 @@ export async function POST(request: NextRequest) {
     const topicsWithDescriptions = await generateEnhancedTopics(
       topic,
       journeyContext,
-      count
+      count,
+      usedTopics
     );
 
     return NextResponse.json({

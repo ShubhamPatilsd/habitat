@@ -12,61 +12,11 @@ interface Node {
   isClicked?: boolean;
   isCurrentNode?: boolean; // Track which node is currently active
   isBurrowed?: boolean; // Track burrowed nodes
+  isFaded?: boolean; // Track if node should be faded (sibling of current path)
 }
 export default function NodesPage() {
-  const [nodeIdCounter, setNodeIdCounter] = useState(6); // Counter for unique IDs (start from 6 since we have 5 initial nodes)
-  const [nodes, setNodes] = useState<Node[]>([
-    {
-      id: "node-1",
-      x: 800,
-      y: 800,
-      text: "Quantum Physics",
-      description:
-        "The branch of physics that deals with the behavior of matter and energy at the atomic and subatomic level.",
-      level: 0,
-      isCurrentNode: false,
-    },
-    {
-      id: "node-2",
-      x: 1200,
-      y: 800,
-      text: "Ancient History",
-      description:
-        "The study of human civilization from the earliest recorded periods to the fall of ancient empires.",
-      level: 0,
-      isCurrentNode: false,
-    },
-    {
-      id: "node-3",
-      x: 800,
-      y: 1200,
-      text: "Culinary Arts",
-      description:
-        "The art and science of preparing, cooking, and presenting food in creative and delicious ways.",
-      level: 0,
-      isCurrentNode: false,
-    },
-    {
-      id: "node-4",
-      x: 1200,
-      y: 1200,
-      text: "Space Exploration",
-      description:
-        "The ongoing discovery and exploration of celestial structures in outer space by means of evolving technology.",
-      level: 0,
-      isCurrentNode: false,
-    },
-    {
-      id: "node-5",
-      x: 1000,
-      y: 1000,
-      text: "Music Theory",
-      description:
-        "The study of the practices and possibilities of music, including harmony, rhythm, and composition.",
-      level: 0,
-      isCurrentNode: false,
-    },
-  ]);
+  const [nodeIdCounter, setNodeIdCounter] = useState(1); // Counter for unique IDs
+  const [nodes, setNodes] = useState<Node[]>([]);
   const [connections, setConnections] = useState<
     { from: string; to: string }[]
   >([]);
@@ -74,6 +24,10 @@ export default function NodesPage() {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [lastOffset, setLastOffset] = useState({ x: 0, y: 0 });
+  const [isDraggingNode, setIsDraggingNode] = useState(false);
+  const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
+  const [nodeDragStart, setNodeDragStart] = useState({ x: 0, y: 0 });
+  const [usedTopics, setUsedTopics] = useState<Set<string>>(new Set());
   const [zoom, setZoom] = useState(1);
   const [isPhysicsEnabled, setIsPhysicsEnabled] = useState(true);
   const [topics, setTopics] = useState<string[]>(["next1"]);
@@ -220,18 +174,196 @@ export default function NodesPage() {
       level: 0,
     });
   };
+  // Generate AI-powered diverse starting topics
+  const generateRandomStartingTopics = async () => {
+    try {
+      console.log("🤖 Generating AI-powered diverse starting topics...");
+
+      const response = await fetch("/api/explore-topic", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          topic: "Random diverse topics",
+          journey: [],
+          count: 5,
+          usedTopics: [], // No used topics for initial generation
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const topics = data.topics || [];
+
+        console.log(
+          "✅ AI generated topics:",
+          topics.map((t) => t.title)
+        );
+
+        // Create 5 AI-generated starting nodes in a pentagon formation
+        const centerX = 1000;
+        const centerY = 1000;
+        const radius = 300;
+        const pentagonAngles = [0, 72, 144, 216, 288].map(
+          (deg) => (deg * Math.PI) / 180
+        );
+
+        const startingNodes: Node[] = topics
+          .slice(0, 5)
+          .map((topic: any, i: number) => ({
+            id: `node-${i + 1}`,
+            x: centerX + Math.cos(pentagonAngles[i]) * radius,
+            y: centerY + Math.sin(pentagonAngles[i]) * radius,
+            text: topic.title || `AI Topic ${i + 1}`,
+            description:
+              topic.description ||
+              "An AI-generated diverse topic for exploration.",
+            level: 0,
+            isCurrentNode: false,
+            isClicked: false,
+            isBurrowed: false,
+          }));
+
+        setNodes(startingNodes);
+        setNodeIdCounter(6); // Start from 6 since we have 5 initial nodes
+
+        // Track the AI-generated topics to prevent duplicates
+        const initialTopicTitles = startingNodes.map((node) =>
+          node.text.toLowerCase()
+        );
+        setUsedTopics(new Set(initialTopicTitles));
+
+        console.log(
+          "🎯 Initial topics tracked:",
+          Array.from(initialTopicTitles)
+        );
+      } else {
+        console.error("❌ API failed, using enhanced fallback topics");
+        await generateEnhancedFallbackTopics();
+      }
+    } catch (error) {
+      console.error("❌ Error generating AI topics:", error);
+      await generateEnhancedFallbackTopics();
+    }
+  };
+
+  // Enhanced fallback with more diverse topics
+  const generateEnhancedFallbackTopics = async () => {
+    const diverseFallbackTopics = [
+      {
+        title: "Artificial Intelligence",
+        description: "The simulation of human intelligence in machines",
+      },
+      {
+        title: "Climate Change",
+        description:
+          "Long-term shifts in global temperatures and weather patterns",
+      },
+      {
+        title: "Space Exploration",
+        description:
+          "The ongoing discovery and exploration of celestial structures",
+      },
+      {
+        title: "Quantum Physics",
+        description:
+          "The branch of physics dealing with atomic and subatomic behavior",
+      },
+      {
+        title: "Ancient History",
+        description:
+          "The study of human civilization from earliest recorded periods",
+      },
+    ];
+
+    const centerX = 1000;
+    const centerY = 1000;
+    const radius = 300;
+    const pentagonAngles = [0, 72, 144, 216, 288].map(
+      (deg) => (deg * Math.PI) / 180
+    );
+
+    const startingNodes: Node[] = diverseFallbackTopics.map((topic, i) => ({
+      id: `node-${i + 1}`,
+      x: centerX + Math.cos(pentagonAngles[i]) * radius,
+      y: centerY + Math.sin(pentagonAngles[i]) * radius,
+      text: topic.title,
+      description: topic.description,
+      level: 0,
+      isCurrentNode: false,
+      isClicked: false,
+      isBurrowed: false,
+    }));
+
+    setNodes(startingNodes);
+    setNodeIdCounter(6);
+
+    // Track the fallback topics to prevent duplicates
+    const fallbackTopicTitles = startingNodes.map((node) =>
+      node.text.toLowerCase()
+    );
+    setUsedTopics(new Set(fallbackTopicTitles));
+
+    console.log(
+      "🔄 Using enhanced fallback topics:",
+      Array.from(fallbackTopicTitles)
+    );
+  };
+
+  // Generate random starting topics on component mount
+  useEffect(() => {
+    generateRandomStartingTopics();
+  }, []);
+
+  // Global mouse event listeners for node dragging
+  useEffect(() => {
+    const handleGlobalMouseMove = (event: MouseEvent) => {
+      if (isDraggingNode && draggedNodeId) {
+        const deltaX = event.clientX - nodeDragStart.x;
+        const deltaY = event.clientY - nodeDragStart.y;
+
+        setNodes((prev) =>
+          prev.map((n) =>
+            n.id === draggedNodeId
+              ? { ...n, x: n.x + deltaX / zoom, y: n.y + deltaY / zoom }
+              : n
+          )
+        );
+
+        setNodeDragStart({ x: event.clientX, y: event.clientY });
+      }
+    };
+
+    const handleGlobalMouseUp = () => {
+      handleNodeMouseUp();
+    };
+
+    if (isDraggingNode) {
+      document.addEventListener("mousemove", handleGlobalMouseMove);
+      document.addEventListener("mouseup", handleGlobalMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener("mousemove", handleGlobalMouseMove);
+      document.removeEventListener("mouseup", handleGlobalMouseUp);
+    };
+  }, [isDraggingNode, draggedNodeId, nodeDragStart, zoom]);
+
   // Center the canvas on the middle node when component mounts
   useEffect(() => {
-    const centerCanvas = () => centerOnNode(nodes[4]); // Center on node-5 (Music Theory)
-    // Center with a small delay to ensure container is rendered
-    const timeoutId = setTimeout(centerCanvas, 100);
-    // Also center on window resize
-    window.addEventListener("resize", centerCanvas);
-    return () => {
-      clearTimeout(timeoutId);
-      window.removeEventListener("resize", centerCanvas);
-    };
-  }, []);
+    if (nodes.length > 0) {
+      const centerCanvas = () => centerOnNode(nodes[0]); // Center on first node
+      // Center with a small delay to ensure container is rendered
+      const timeoutId = setTimeout(centerCanvas, 100);
+      // Also center on window resize
+      window.addEventListener("resize", centerCanvas);
+      return () => {
+        clearTimeout(timeoutId);
+        window.removeEventListener("resize", centerCanvas);
+      };
+    }
+  }, [nodes]);
 
   // Function to fetch rich summary for a node
   const fetchRichSummary = async (node: Node) => {
@@ -285,6 +417,7 @@ export default function NodesPage() {
           topic: parentNode.text,
           journey: journeyPath,
           count: 5, // ALWAYS 5 topics
+          usedTopics: Array.from(usedTopics), // Pass used topics to avoid duplicates
         }),
       });
 
@@ -298,14 +431,31 @@ export default function NodesPage() {
       console.error("Error generating topics:", error);
     }
 
+    // Filter out duplicate topics and ensure we have exactly 5 unique topics
+    const uniqueTopics = topics.filter((topic) => {
+      const topicTitle = topic.title.toLowerCase();
+      return !usedTopics.has(topicTitle);
+    });
+
+    // Add new topics to used topics set
+    const newTopicTitles = uniqueTopics.map((topic) =>
+      topic.title.toLowerCase()
+    );
+    setUsedTopics((prev) => new Set([...prev, ...newTopicTitles]));
+
     // Ensure we always have exactly 5 topics
-    while (topics.length < 5) {
+    while (uniqueTopics.length < 5) {
       const fallbackTitles = [
         "Research",
         "Applications",
         "History",
         "Future",
         "Theory",
+        "Development",
+        "Innovation",
+        "Analysis",
+        "Study",
+        "Exploration",
       ];
       const fallbackDescriptions = [
         "The systematic investigation of a subject to discover new information",
@@ -313,14 +463,48 @@ export default function NodesPage() {
         "The chronological record of past events and developments",
         "Upcoming trends, technologies, and potential developments",
         "The fundamental principles and frameworks underlying a field",
+        "The process of growth and advancement in a particular area",
+        "The introduction of new ideas, methods, or technologies",
+        "The detailed examination of components and their relationships",
+        "The focused investigation and learning about a specific subject",
+        "The act of traveling through an unfamiliar area to learn about it",
       ];
-      topics.push({
-        title: fallbackTitles[topics.length] || `Topic ${topics.length + 1}`,
-        description:
-          fallbackDescriptions[topics.length] ||
-          "A related concept in this field.",
-      });
+
+      // Find a fallback title that hasn't been used
+      let fallbackIndex = uniqueTopics.length;
+      while (
+        fallbackIndex < fallbackTitles.length &&
+        usedTopics.has(fallbackTitles[fallbackIndex].toLowerCase())
+      ) {
+        fallbackIndex++;
+      }
+
+      if (fallbackIndex < fallbackTitles.length) {
+        const newTopic = {
+          title: fallbackTitles[fallbackIndex],
+          description:
+            fallbackDescriptions[fallbackIndex] ||
+            "A related concept in this field.",
+        };
+        uniqueTopics.push(newTopic);
+        setUsedTopics(
+          (prev) => new Set([...prev, newTopic.title.toLowerCase()])
+        );
+      } else {
+        // If all fallbacks are used, create a unique topic
+        const uniqueTopic = {
+          title: `Topic ${uniqueTopics.length + 1}`,
+          description: "A related concept in this field.",
+        };
+        uniqueTopics.push(uniqueTopic);
+        setUsedTopics(
+          (prev) => new Set([...prev, uniqueTopic.title.toLowerCase()])
+        );
+      }
     }
+
+    // Use the filtered unique topics
+    const finalTopics = uniqueTopics.slice(0, 5);
 
     // ORGANIZED LAYOUT SYSTEM
     const newNodes: Node[] = [];
@@ -349,10 +533,11 @@ export default function NodesPage() {
         id: `node-${nodeIdCounter + i}`,
         x: position.x,
         y: position.y,
-        text: topics[i]?.title || `Topic ${i + 1}`,
+        text: finalTopics[i]?.title || `Topic ${i + 1}`,
         description:
-          topics[i]?.description || `A related concept to explore further.`,
-        richContent: topics[i]?.richContent,
+          finalTopics[i]?.description ||
+          `A related concept to explore further.`,
+        richContent: finalTopics[i]?.richContent,
         level: parentNode.level + 1,
         parentId: parentNode.id,
         isClicked: false,
@@ -440,8 +625,22 @@ export default function NodesPage() {
 
     return positions;
   };
+  // Handle node drag start
+  const handleNodeMouseDown = (node: Node, event: React.MouseEvent) => {
+    event.stopPropagation();
+    setIsDraggingNode(true);
+    setDraggedNodeId(node.id);
+    setNodeDragStart({ x: event.clientX, y: event.clientY });
+  };
+
+  // Handle node drag end
+  const handleNodeMouseUp = () => {
+    setIsDraggingNode(false);
+    setDraggedNodeId(null);
+  };
+
   const handleNodeClick = async (node: Node, event: React.MouseEvent) => {
-    if (isDragging) return;
+    if (isDragging || isDraggingNode) return;
 
     // Don't allow clicking on burrowed nodes
     if (node.isBurrowed) return;
@@ -455,11 +654,17 @@ export default function NodesPage() {
       // If it's a blue node, update states first
       if (!node.isCurrentNode) {
         setNodes((prev) =>
-          prev.map((n) => ({
-            ...n,
-            isClicked: n.isCurrentNode ? true : n.isClicked, // Previous current becomes grey (clicked)
-            isCurrentNode: n.id === node.id, // This blue node becomes current (beige)
-          }))
+          prev.map((n) => {
+            // Find siblings (nodes with same parent)
+            const isSibling = n.parentId === node.parentId && n.id !== node.id;
+
+            return {
+              ...n,
+              isClicked: n.isCurrentNode ? true : n.isClicked, // Previous current becomes grey (clicked)
+              isCurrentNode: n.id === node.id, // This blue node becomes current (beige)
+              isFaded: isSibling ? true : n.isFaded, // Fade siblings of the clicked node
+            };
+          })
         );
       }
       // Fetch rich summary for the clicked node
@@ -473,18 +678,22 @@ export default function NodesPage() {
     }
   };
   const handleMouseDown = (event: React.MouseEvent) => {
-    setIsDragging(true);
-    setDragStart({ x: event.clientX, y: event.clientY });
-    setLastOffset(canvasOffset);
+    // Only start canvas dragging if we're not dragging a node
+    if (!isDraggingNode) {
+      setIsDragging(true);
+      setDragStart({ x: event.clientX, y: event.clientY });
+      setLastOffset(canvasOffset);
+    }
   };
   const handleMouseMove = (event: React.MouseEvent) => {
-    if (!isDragging) return;
-    const deltaX = event.clientX - dragStart.x;
-    const deltaY = event.clientY - dragStart.y;
-    setCanvasOffset({
-      x: lastOffset.x + deltaX,
-      y: lastOffset.y + deltaY,
-    });
+    if (isDragging && !isDraggingNode) {
+      const deltaX = event.clientX - dragStart.x;
+      const deltaY = event.clientY - dragStart.y;
+      setCanvasOffset({
+        x: lastOffset.x + deltaX,
+        y: lastOffset.y + deltaY,
+      });
+    }
   };
 
   // Simple throttle function for popup mouse tracking
@@ -546,9 +755,11 @@ export default function NodesPage() {
   }, []);
   const handleMouseUp = () => {
     setIsDragging(false);
+    handleNodeMouseUp();
   };
   const handleMouseLeave = () => {
     setIsDragging(false);
+    handleNodeMouseUp();
   };
   const handleWheel = (event: React.WheelEvent) => {
     event.preventDefault();
@@ -696,6 +907,12 @@ export default function NodesPage() {
       return { backgroundColor: "#D2B48C" }; // Beige for current node
     } else if (node.isClicked) {
       return { backgroundColor: "#808080" }; // Grey for previously visited nodes
+    } else if (node.isFaded) {
+      return {
+        backgroundColor: "#0114FF", // Blue for unvisited nodes
+        opacity: 0.3, // Fade the node
+        transform: "scale(0.8)", // Make it slightly smaller
+      };
     } else {
       return { backgroundColor: "#0114FF" }; // Blue for unvisited nodes
     }
@@ -936,7 +1153,7 @@ export default function NodesPage() {
                   y2={toNode.y}
                   stroke="#0114FF"
                   strokeWidth="2"
-                  opacity="0.8"
+                  opacity={toNode.isFaded ? "0.2" : "0.8"}
                 />
               );
             })}
@@ -946,17 +1163,26 @@ export default function NodesPage() {
           {nodes.map((node) => (
             <div
               key={node.id}
-              className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer transition-all duration-300 hover:scale-110"
+              className={`absolute transform -translate-x-1/2 -translate-y-1/2 transition-all duration-300 ${
+                isDraggingNode && draggedNodeId === node.id
+                  ? "cursor-grabbing scale-110 z-50"
+                  : "cursor-grab hover:scale-110"
+              }`}
               style={{
                 left: node.x,
                 top: node.y,
               }}
+              onMouseDown={(e) => handleNodeMouseDown(node, e)}
               onClick={(e) => handleNodeClick(node, e)}
               onMouseEnter={(e) => handleNodeMouseEnter(e, node)}
               onMouseLeave={handleNodeMouseLeave}
             >
               <div
-                className="w-24 h-24 rounded-full text-[#fff0d2] flex items-center justify-center text-sm font-bold shadow-lg hover:shadow-xl transition-all duration-300 relative overflow-hidden"
+                className={`w-24 h-24 rounded-full text-[#fff0d2] flex items-center justify-center text-sm font-bold transition-all duration-300 relative overflow-hidden ${
+                  isDraggingNode && draggedNodeId === node.id
+                    ? "shadow-2xl ring-4 ring-yellow-400 ring-opacity-50"
+                    : "shadow-lg hover:shadow-xl"
+                }`}
                 style={{
                   ...getNodeStyle(node),
                   animation:
@@ -1034,12 +1260,17 @@ export default function NodesPage() {
                 ? "#D2B48C"
                 : hoveredNode.isClicked
                 ? "#808080"
+                : hoveredNode.isFaded
+                ? "#fff0d2"
                 : "#fff0d2",
               borderColor: hoveredNode.isCurrentNode
                 ? "#D2B48C"
                 : hoveredNode.isClicked
                 ? "#808080"
+                : hoveredNode.isFaded
+                ? "#0114FF"
                 : "#0114FF",
+              opacity: hoveredNode.isFaded ? 0.6 : 1,
             }}
             role="img"
             aria-label={hoveredNode.text}
@@ -1051,6 +1282,8 @@ export default function NodesPage() {
                   ? "#fff0d2"
                   : hoveredNode.isClicked
                   ? "#fff0d2"
+                  : hoveredNode.isFaded
+                  ? "#0114FF"
                   : "#0114FF",
               }}
             >
@@ -1063,6 +1296,8 @@ export default function NodesPage() {
                   ? "Current"
                   : hoveredNode.isClicked
                   ? "Visited"
+                  : hoveredNode.isFaded
+                  ? "Faded"
                   : "Unvisited"}
               </p>
               <p className="text-base opacity-90 leading-relaxed break-words">

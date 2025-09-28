@@ -1173,12 +1173,6 @@ function NodesPageContent() {
           </div>
         )}
         <button
-          onClick={handleBurrow}
-          className="px-4 py-2 bg-[#1e00ff] text-[#fff0d2] rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 text-sm font-medium"
-        >
-          Burrow
-        </button>
-        <button
           onClick={handleResetView}
           className="px-4 py-2 bg-gray-700 text-white rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 text-sm font-medium"
         >

@@ -1,5 +1,5 @@
 "use client";
-import {useState, useRef, useEffect} from "react";
+import { useState, useRef, useEffect } from "react";
 
 interface Node {
   id: string;
@@ -21,13 +21,13 @@ export default function NodesPage() {
       level: 0,
     },
   ]);
-  const [connections, setConnections] = useState<{from: string; to: string}[]>(
-    []
-  );
-  const [canvasOffset, setCanvasOffset] = useState({x: 0, y: 0});
+  const [connections, setConnections] = useState<
+    { from: string; to: string }[]
+  >([]);
+  const [canvasOffset, setCanvasOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({x: 0, y: 0});
-  const [lastOffset, setLastOffset] = useState({x: 0, y: 0});
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [lastOffset, setLastOffset] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [isPhysicsEnabled, setIsPhysicsEnabled] = useState(true);
   const [showBurrowAnimation, setShowBurrowAnimation] = useState(false);
@@ -36,12 +36,16 @@ export default function NodesPage() {
     "appear" | "zoom" | "done"
   >("appear");
   const [topics, setTopics] = useState<string[]>(["next1"]);
-  const [currTopic, setCurrTopic] = useState<string>("next1")
+  const [currTopic, setCurrTopic] = useState<string>("next1");
   const containerRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<number | null>(null);
+  // popup + fullscreen states
+  const [hoveredNode, setHoveredNode] = useState<Node | null>(null);
+  const [showPopup, setShowPopup] = useState(false);
+  const [expandedNode, setExpandedNode] = useState<Node | null>(null);
+  const [hoverTimer, setHoverTimer] = useState<NodeJS.Timeout | null>(null);
 
-
-    // Function to center the view on a specific node
+  // Function to center the view on a specific node
   const centerOnNode = (node: Node) => {
     if (containerRef.current) {
       const centerX = containerRef.current.clientWidth / 2;
@@ -51,7 +55,7 @@ export default function NodesPage() {
       const offsetX = centerX - node.x * zoom;
       const offsetY = centerY - node.y * zoom;
 
-      setCanvasOffset({x: offsetX, y: offsetY});
+      setCanvasOffset({ x: offsetX, y: offsetY });
     }
   };
 
@@ -61,10 +65,9 @@ export default function NodesPage() {
       console.log(currTopic);
     } catch (error) {
       console.error("Failed to save nodes to local storage:", error);
-      console.log("fail")
+      console.log("fail");
     }
 
-    
     setShowBurrowAnimation(true);
     setTimeout(() => {
       setShowBurrowAnimation(false);
@@ -96,13 +99,11 @@ export default function NodesPage() {
       }, 1000);
     }, 2000);
 
-    //set topic 
-    setTopics(prev => [...prev, `next${prev.length + 1}`]);
-    setCurrTopic("next"+(topics.length+1));
+    //set topic
+    setTopics((prev) => [...prev, `next${prev.length + 1}`]);
+    setCurrTopic("next" + (topics.length + 1));
     console.log(currTopic);
   };
-
-
 
   // Center the canvas on the starting node when component mounts
   useEffect(() => {
@@ -122,7 +123,7 @@ export default function NodesPage() {
 
   const generateNewNodes = (parentNode: Node) => {
     const newNodes: Node[] = [];
-    const newConnections: {from: string; to: string}[] = [];
+    const newConnections: { from: string; to: string }[] = [];
     const radius = 300; // Base radius for spacing
 
     // Determine if this is the root node (no parent)
@@ -147,7 +148,7 @@ export default function NodesPage() {
         };
 
         newNodes.push(newNode);
-        newConnections.push({from: parentNode.id, to: newNode.id});
+        newConnections.push({ from: parentNode.id, to: newNode.id });
       }
     } else {
       // For non-root nodes, first find the direction to the parent
@@ -173,12 +174,12 @@ export default function NodesPage() {
         // Update the parent node position
         setNodes((prev) =>
           prev.map((node: Node) =>
-            node.id === parentNode.id ? {...node, x: newX, y: newY} : node
+            node.id === parentNode.id ? { ...node, x: newX, y: newY } : node
           )
         );
 
         // Update parentNode reference for the rest of the function
-        parentNode = {...parentNode, x: newX, y: newY};
+        parentNode = { ...parentNode, x: newX, y: newY };
 
         // Generate 3 nodes in a 120-degree arc away from the parent
         for (let i = 0; i < 3; i++) {
@@ -205,7 +206,7 @@ export default function NodesPage() {
           };
 
           newNodes.push(newNode);
-          newConnections.push({from: parentNode.id, to: newNode.id});
+          newConnections.push({ from: parentNode.id, to: newNode.id });
         }
       }
     }
@@ -220,16 +221,20 @@ export default function NodesPage() {
   };
 
   const handleNodeClick = (node: Node, event: React.MouseEvent) => {
-    // Prevent node click when dragging
     if (isDragging) return;
 
-    // Mark the node as clicked
+    if (node.isClicked) {
+      // grey nodes → open fullscreen
+      setExpandedNode(node);
+      return;
+    }
+
+    // normal behavior: mark as clicked + spawn children
     setNodes((prev) =>
-      prev.map((n: Node) => (n.id === node.id ? {...n, isClicked: true} : n))
+      prev.map((n) => (n.id === node.id ? { ...n, isClicked: true } : n))
     );
 
-    // Only generate new nodes if this node doesn't have children yet
-    const hasChildren = nodes.some((n: Node) => n.parentId === node.id);
+    const hasChildren = nodes.some((n) => n.parentId === node.id);
     if (!hasChildren) {
       generateNewNodes(node);
     }
@@ -237,7 +242,7 @@ export default function NodesPage() {
 
   const handleMouseDown = (event: React.MouseEvent) => {
     setIsDragging(true);
-    setDragStart({x: event.clientX, y: event.clientY});
+    setDragStart({ x: event.clientX, y: event.clientY });
     setLastOffset(canvasOffset);
   };
 
@@ -285,7 +290,7 @@ export default function NodesPage() {
       const newOffsetY = mouseY - worldY * newZoom;
 
       setZoom(newZoom);
-      setCanvasOffset({x: newOffsetX, y: newOffsetY});
+      setCanvasOffset({ x: newOffsetX, y: newOffsetY });
     }
   };
 
@@ -373,7 +378,7 @@ export default function NodesPage() {
 
   const handleTopicClick = (topic: string) => {
     try {
-      localStorage.setItem(currTopic,JSON.stringify(nodes));
+      localStorage.setItem(currTopic, JSON.stringify(nodes));
     } catch (error) {
       console.error("Failed to save nodes to local storage:", error);
     }
@@ -390,13 +395,12 @@ export default function NodesPage() {
       console.error(`Failed to load nodes for topic ${topic}:`, error);
     }
 
-
     setCurrTopic(topic);
   };
 
   return (
     <div
-      style={{position: "fixed", inset: 0, overflow: "hidden"}}
+      style={{ position: "fixed", inset: 0, overflow: "hidden" }}
       className="bg-[#fff0d2]"
     >
       {/* Stack display */}
@@ -414,7 +418,7 @@ export default function NodesPage() {
                 transform: `translateY(${index * 2}px)`,
                 marginTop: index === 0 ? 0 : "-2px",
                 boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-                zIndex: topics.length - index
+                zIndex: topics.length - index,
               }}
               onClick={() => handleTopicClick(topic)}
               role="button"
@@ -512,6 +516,25 @@ export default function NodesPage() {
                 top: node.y,
               }}
               onClick={(e) => handleNodeClick(node, e)}
+              onMouseEnter={() => {
+                if (node.isClicked) {
+                  // only grey nodes
+                  const timer = setTimeout(() => {
+                    setHoveredNode(node);
+                    setShowPopup(true);
+
+                    // auto-expand after 2s
+                    setTimeout(() => setExpandedNode(node), 2000);
+                  }, 400);
+                  setHoverTimer(timer);
+                }
+              }}
+              onMouseLeave={() => {
+                if (hoverTimer) clearTimeout(hoverTimer);
+                setHoverTimer(null);
+                setHoveredNode(null);
+                setShowPopup(false);
+              }}
             >
               <div
                 className={`w-16 h-16 rounded-full text-[#fff0d2] flex items-center justify-center text-sm font-medium shadow-lg hover:shadow-xl transition-all duration-300 ${
@@ -582,6 +605,38 @@ export default function NodesPage() {
           }
         }
       `}</style>
+      {/* Hover popup */}
+      {showPopup && hoveredNode && (
+        <div
+          className="absolute bg-white shadow-lg rounded-lg p-4 z-50"
+          style={{
+            left: Math.min(hoveredNode.x + 120, window.innerWidth - 280),
+            top: Math.min(hoveredNode.y, window.innerHeight - 180),
+            width: "240px",
+          }}
+        >
+          <h3 className="font-semibold">{hoveredNode.text}</h3>
+          <p className="text-sm text-gray-600">Quick preview content…</p>
+        </div>
+      )}
+
+      {/* Fullscreen expanded */}
+      {expandedNode && (
+        <div className="fixed inset-0 bg-black flex items-center justify-center z-50">
+          <div className="bg-white w-[80%] h-[80%] rounded-lg shadow-xl p-6 relative">
+            <button
+              onClick={() => setExpandedNode(null)}
+              className="absolute top-2 right-2 px-3 py-1 bg-gray-200 rounded"
+            >
+              Close
+            </button>
+            <h2 className="text-xl font-bold mb-4">{expandedNode.text}</h2>
+            <p className="text-gray-700">
+              Expanded rabbit hole content goes here.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, Suspense } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { useSearchParams } from "next/navigation";
 
@@ -17,7 +17,7 @@ interface Node {
   isBurrowed?: boolean; // Track burrowed nodes
   isFaded?: boolean; // Track if node should be faded (sibling of current path)
 }
-export default function NodesPage() {
+function NodesPageContent() {
   // Removed nodeIdCounter - using UUIDs instead
   const [nodes, setNodes] = useState<Node[]>([]);
   const [connections, setConnections] = useState<
@@ -1432,5 +1432,13 @@ export default function NodesPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function NodesPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <NodesPageContent />
+    </Suspense>
   );
 }

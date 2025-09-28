@@ -38,7 +38,29 @@ export default function NodesPage() {
   const containerRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<number | null>(null);
 
+
+    // Function to center the view on a specific node
+  const centerOnNode = (node: Node) => {
+    if (containerRef.current) {
+      const centerX = containerRef.current.clientWidth / 2;
+      const centerY = containerRef.current.clientHeight / 2;
+
+      // Account for zoom level when calculating the offset
+      const offsetX = centerX - node.x * zoom;
+      const offsetY = centerY - node.y * zoom;
+
+      setCanvasOffset({x: offsetX, y: offsetY});
+    }
+  };
+
   const handleBurrow = () => {
+    // Save current nodes state to local storage
+    try {
+      localStorage.setItem("root", JSON.stringify(nodes));
+    } catch (error) {
+      console.error("Failed to save nodes to local storage:", error);
+    }
+
     setShowBurrowAnimation(true);
     setTimeout(() => {
       setShowBurrowAnimation(false);
@@ -53,24 +75,29 @@ export default function NodesPage() {
         setTimeout(() => {
           setHoleAnimation("done");
           setShowRabbitHole(false);
+          // Clear the nodes array after the animation is complete
+          setNodes([
+            {
+              id: "root",
+              x: 1000,
+              y: 1000,
+              text: "Start",
+              level: 0,
+            },
+          ]);
+          // Also clear connections
+          setConnections([]);
+          centerOnNode(nodes[0]);
         }, 2000);
       }, 1000);
     }, 2000);
+
+    //save to localstorage
+
+    //clear nodes, make the start node the last one you clicked on
   };
 
-  // Function to center the view on a specific node
-  const centerOnNode = (node: Node) => {
-    if (containerRef.current) {
-      const centerX = containerRef.current.clientWidth / 2;
-      const centerY = containerRef.current.clientHeight / 2;
 
-      // Account for zoom level when calculating the offset
-      const offsetX = centerX - node.x * zoom;
-      const offsetY = centerY - node.y * zoom;
-
-      setCanvasOffset({x: offsetX, y: offsetY});
-    }
-  };
 
   // Center the canvas on the starting node when component mounts
   useEffect(() => {
@@ -346,9 +373,9 @@ export default function NodesPage() {
     >
       {/* Burrow animation */}
       {showBurrowAnimation && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
+        <div className="fixed inset-0 flex flex-col items-center justify-center z-50 pointer-events-none">
           <div
-            className="text-[#000000] text-4xl font-bold"
+            className="text-[#000000] text-4xl font-bold mt-30"
             style={{
               animation: "burrowText 2s ease-in-out forwards",
             }}
@@ -382,8 +409,8 @@ export default function NodesPage() {
                 holeAnimation === "appear"
                   ? "holeAppear 0.5s ease-out forwards"
                   : holeAnimation === "zoom"
-                  ? "holeZoom 2s ease-in forwards"
-                  : "none"
+                    ? "holeZoom 2s ease-in forwards"
+                    : "none"
               }`,
             }}
           ></div>
@@ -466,7 +493,7 @@ export default function NodesPage() {
           }
           100% {
             transform: perspective(1000px) rotateX(0deg) scale(15);
-            opacity: 0;
+            opacity: 1;
           }
         }
 

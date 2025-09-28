@@ -1082,7 +1082,9 @@ export default function NodesPage() {
             >
               Close
             </button>
-            <h2 className="text-3xl font-bold mb-6 pr-20">{expandedNode.text}</h2>
+            <h2 className="text-3xl font-bold mb-6 pr-20">
+              {expandedNode.text}
+            </h2>
             <div className="text-gray-700 text-lg leading-relaxed mb-6">
               {expandedNode.description || "No description available."}
             </div>

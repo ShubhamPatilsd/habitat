@@ -33,60 +33,64 @@ app.post("/api/rabbithole", (req, res) => {
       return res.status(400).json({ error: "missing page payload" });
     }
 
+    // Always generate a unique ID for storage/lookup
     const id = crypto.randomBytes(8).toString("hex");
+
+    // Human-friendly title shown to users
+    const nodeTitle = title || page.title || page.metaDescription || page.url;
+
     const node = {
-      id,
-      title: title || page.title || page.metaDescription || page.url,
-      page,
+      id, // unique identifier
+      title: nodeTitle, // what users see
+      page, // scraped page object
       summary: summary || [],
       tags: tags || [],
       rabbitholeId: rabbitholeId || null,
       createdAt: createdAt || new Date().toISOString(),
     };
 
+    // Save as file named after the unique ID
     fs.writeFileSync(
       path.join(STORAGE_DIR, id + ".json"),
       JSON.stringify(node, null, 2)
     );
 
     const nodeUrl = `http://localhost:3001/node/${id}`;
-    console.log("Created node", id, "for", page.url);
+    console.log("✅ Created node", id, "for", page.url);
     return res.json({ success: true, nodeUrl });
   } catch (err) {
-    console.error(err);
+    console.error("❌ Error creating node:", err);
     return res.status(500).json({ error: "server error" });
   }
 });
 
+// Always return JSON for a single node
 app.get("/node/:id", (req, res) => {
   const id = req.params.id;
   const file = path.join(STORAGE_DIR, id + ".json");
-  if (!fs.existsSync(file)) return res.status(404).send("Not found");
+
+  if (!fs.existsSync(file)) {
+    return res.status(404).json({ error: "Not found" });
+  }
+
   const node = JSON.parse(fs.readFileSync(file, "utf8"));
-  res.send(
-    `<html><body><h1>${escapeHtml(node.title)}</h1><h3>Summary</h3><ul>${(
-      node.summary || []
-    )
-      .map((s) => `<li>${escapeHtml(s)}</li>`)
-      .join(
-        ""
-      )}</ul><h3>Source</h3><a href="${escapeHtml(node.page.url)}" target="_blank">${escapeHtml(
-      node.page.url
-    )}</a><pre style="white-space:pre-wrap;">${escapeHtml(JSON.stringify(node.page, null, 2))}</pre></body></html>`
-  );
+  res.json(node);
 });
 
-function escapeHtml(s) {
-  return String(s).replace(
-    /[&<>"']/g,
-    (m) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
-        m
-      ]
-  );
-}
+// API alias: same as above, but namespaced
+app.get("/api/node/:id", (req, res) => {
+  const id = req.params.id;
+  const file = path.join(STORAGE_DIR, id + ".json");
+
+  if (!fs.existsSync(file)) {
+    return res.status(404).json({ error: "Not found" });
+  }
+
+  const node = JSON.parse(fs.readFileSync(file, "utf8"));
+  res.json(node);
+});
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () =>
-  console.log("Example Habitat server listening on", PORT)
+  console.log("🚀 Example Habitat server listening on", PORT)
 );

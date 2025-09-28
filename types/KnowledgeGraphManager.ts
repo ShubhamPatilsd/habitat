@@ -1,4 +1,4 @@
-import { TopicNode, KnowledgeGraph } from "../types/graph";
+import { TopicNode, KnowledgeGraph } from "./graph";
 
 export class KnowledgeGraphManager {
   private graph: KnowledgeGraph;

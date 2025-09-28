@@ -1,5 +1,5 @@
 import { Agent } from "@mastra/core/agent";
-import { google } from "@ai-sdk/google";
+import { openai } from "@ai-sdk/openai";
 import { z } from "zod";
 import { contentScraperTool } from "../tools/content-scraper";
 
@@ -43,7 +43,7 @@ export const enhancedTopicGeneratorAgent = new Agent({
     Focus on creating topics that make people go "WOW, I need to know more about this!" 
     Think mysteries, breakthroughs, paradoxes, and mind-bending concepts that are genuinely fascinating!
   `,
-  model: google("gemini-2.5-flash"),
+  model: openai("gpt-4o-mini"),
 });
 
 // Enhanced function to generate topics with rich content

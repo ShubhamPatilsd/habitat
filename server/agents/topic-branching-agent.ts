@@ -1,7 +1,7 @@
 import { Agent } from "@mastra/core/agent";
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
-import { google } from "@ai-sdk/google";
+import { openai } from "@ai-sdk/openai";
 
 // Tool 1: Search for Wikipedia articles
 const wikipediaSearchTool = createTool({
@@ -246,7 +246,7 @@ Each topic should be:
 Examples of good topics: "Consciousness Mystery", "Time Dilation", "Lost Civilizations", "Quantum Entanglement", "Digital Immortality"
 
 Focus on creating topics that make people go "WOW, I need to know more about this!"`,
-  model: google("gemini-2.5-flash"),
+  model: openai("gpt-4o-mini"),
   tools: { wikipediaSearchTool, wikipediaContentTool },
 });
 

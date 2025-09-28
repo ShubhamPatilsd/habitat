@@ -1,0 +1,41 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Habitat - Send Page</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <style>
+      body { font-family: system-ui, Arial, sans-serif; width: 360px; padding: 12px; }
+      h3 { margin: 0 0 8px 0; font-size: 16px; }
+      input, textarea, select { width: 100%; box-sizing: border-box; padding: 8px; margin-top: 8px; }
+      button { width: 100%; padding: 10px; margin-top: 10px; cursor: pointer; }
+      #status { margin-top: 8px; font-size: 13px; color: #333; }
+      .small { font-size: 12px; color: #666; margin-top: 6px; }
+      .preview { border: 1px solid #eee; padding: 8px; margin-top: 8px; max-height: 160px; overflow: auto; background: #fafafa; }
+      label { display: block; margin-top: 6px; font-size: 13px; }
+    </style>
+  </head>
+  <body>
+    <h3>Send page to Habitat</h3>
+
+    <label for="titleInput">Edit node title (optional)</label>
+    <input id="titleInput" placeholder="Use scraped title or set your own" />
+
+    <label for="tagsInput">Tags (comma separated)</label>
+    <input id="tagsInput" placeholder="e.g. research, ai, rabbit-hole" />
+
+    <label for="rabbithole">Append to rabbithole id (optional)</label>
+    <input id="rabbithole" placeholder="existing rabbithole id or leave blank" />
+
+    <button id="scrapeBtn">Scrape & Create Node</button>
+
+    <div id="status" class="small">Ready.</div>
+
+    <div id="previewWrap" style="display:none;">
+      <div style="margin-top:8px; font-weight:600;">Preview summary</div>
+      <div id="preview" class="preview"></div>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

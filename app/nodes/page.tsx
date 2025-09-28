@@ -1014,7 +1014,7 @@ export default function NodesPage() {
       {/* Enhanced Hover popup - matching website-v3 exactly */}
       {hoveredNode && (
         <div
-          className={`fixed z-50 w-[max(17vw,200px)] rounded-2xl shadow-2xl pointer-events-none transition-all duration-300 ${
+          className={`fixed z-50 w-[max(25vw,300px)] rounded-2xl shadow-2xl pointer-events-none transition-all duration-300 ${
             popupVisible
               ? "pop-animation"
               : "opacity-0 scale-95 origin-bottom-left"
@@ -1028,7 +1028,7 @@ export default function NodesPage() {
           }}
         >
           <div
-            className="relative h-[max(11vw,132px)] w-full overflow-hidden rounded-2xl border-2"
+            className="relative min-h-[max(15vw,180px)] w-full overflow-visible rounded-2xl border-2"
             style={{
               backgroundColor: hoveredNode.isCurrentNode
                 ? "#D2B48C"
@@ -1045,7 +1045,7 @@ export default function NodesPage() {
             aria-label={hoveredNode.text}
           >
             <div
-              className="relative z-10 p-4 h-full flex flex-col justify-center"
+              className="relative z-10 p-4 min-h-full flex flex-col justify-start"
               style={{
                 color: hoveredNode.isCurrentNode
                   ? "#fff0d2"
@@ -1054,7 +1054,7 @@ export default function NodesPage() {
                   : "#0114FF",
               }}
             >
-              <h3 className="font-bold text-2xl truncate mb-2">
+              <h3 className="font-bold text-2xl mb-2 break-words">
                 {hoveredNode.text}
               </h3>
               <p className="text-sm font-medium opacity-90 mb-3">
@@ -1065,7 +1065,7 @@ export default function NodesPage() {
                   ? "Visited"
                   : "Unvisited"}
               </p>
-              <p className="text-base opacity-90 leading-relaxed">
+              <p className="text-base opacity-90 leading-relaxed break-words">
                 {hoveredNode.description || "No description available."}
               </p>
             </div>
@@ -1074,21 +1074,26 @@ export default function NodesPage() {
       )}
       {/* Fullscreen expanded */}
       {expandedNode && (
-        <div className="fixed inset-0 bg-black flex items-center justify-center z-50">
-          <div className="bg-white w-[80%] h-[80%] rounded-lg shadow-xl p-6 relative">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white w-[90%] max-w-4xl h-[90%] rounded-lg shadow-xl p-8 relative overflow-y-auto">
             <button
               onClick={() => setExpandedNode(null)}
-              className="absolute top-2 right-2 px-3 py-1 bg-gray-200 rounded"
+              className="absolute top-4 right-4 px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors"
             >
               Close
             </button>
-            <h2 className="text-xl font-bold mb-4">{expandedNode.text}</h2>
-            <p className="text-gray-700 mb-4">
+            <h2 className="text-3xl font-bold mb-6 pr-20">{expandedNode.text}</h2>
+            <div className="text-gray-700 text-lg leading-relaxed mb-6">
               {expandedNode.description || "No description available."}
-            </p>
-            <p className="text-gray-500 text-sm">
-              Expanded rabbit hole content goes here.
-            </p>
+            </div>
+            <div className="text-gray-500 text-sm">
+              Level {expandedNode.level} •{" "}
+              {expandedNode.isCurrentNode
+                ? "Current Node"
+                : expandedNode.isClicked
+                ? "Previously Visited"
+                : "Unvisited"}
+            </div>
           </div>
         </div>
       )}

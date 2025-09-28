@@ -521,9 +521,6 @@ export default function NodesPage() {
                   const timer = setTimeout(() => {
                     setHoveredNode(node);
                     setShowPopup(true);
-
-                    // auto-expand after 2s
-                    setTimeout(() => setExpandedNode(node), 2000);
                   }, 400);
                   setHoverTimer(timer);
                 }
@@ -611,9 +608,11 @@ export default function NodesPage() {
         <div
           className="absolute bg-white shadow-lg rounded-lg p-4 z-50"
           style={{
-            left: Math.min(hoveredNode.x + 120, window.innerWidth - 280),
-            top: Math.min(hoveredNode.y, window.innerHeight - 180),
-            width: "240px",
+            // project node position into screen space
+            left: hoveredNode.x * zoom + canvasOffset.x + 80,
+            top: hoveredNode.y * zoom + canvasOffset.y - 40,
+            width: "200px",
+            transform: "translate(-50%, -100%)", // keep it centered above
           }}
         >
           <h3 className="font-semibold">{hoveredNode.text}</h3>

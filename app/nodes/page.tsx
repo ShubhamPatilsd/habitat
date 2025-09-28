@@ -1,5 +1,6 @@
 "use client";
 import { useState, useRef, useEffect, useCallback } from "react";
+import { v4 as uuidv4 } from "uuid";
 interface Node {
   id: string;
   x: number;
@@ -15,7 +16,7 @@ interface Node {
   isFaded?: boolean; // Track if node should be faded (sibling of current path)
 }
 export default function NodesPage() {
-  const [nodeIdCounter, setNodeIdCounter] = useState(1); // Counter for unique IDs
+  // Removed nodeIdCounter - using UUIDs instead
   const [nodes, setNodes] = useState<Node[]>([]);
   const [connections, setConnections] = useState<
     { from: string; to: string }[]
@@ -119,7 +120,7 @@ export default function NodesPage() {
     // reset graph - start with 5 diverse topics
     setNodes([
       {
-        id: "node-1",
+        id: uuidv4(),
         x: 800,
         y: 800,
         text: "Quantum Physics",
@@ -129,7 +130,7 @@ export default function NodesPage() {
         isCurrentNode: false,
       },
       {
-        id: "node-2",
+        id: uuidv4(),
         x: 1200,
         y: 800,
         text: "Ancient History",
@@ -139,7 +140,7 @@ export default function NodesPage() {
         isCurrentNode: false,
       },
       {
-        id: "node-3",
+        id: uuidv4(),
         x: 800,
         y: 1200,
         text: "Culinary Arts",
@@ -149,7 +150,7 @@ export default function NodesPage() {
         isCurrentNode: false,
       },
       {
-        id: "node-4",
+        id: uuidv4(),
         x: 1200,
         y: 1200,
         text: "Space Exploration",
@@ -159,7 +160,7 @@ export default function NodesPage() {
         isCurrentNode: false,
       },
       {
-        id: "node-5",
+        id: uuidv4(),
         x: 1000,
         y: 1000,
         text: "Music Theory",
@@ -170,15 +171,10 @@ export default function NodesPage() {
       },
     ]);
     setConnections([]);
-    centerOnNode({
-      id: "node-5",
-      x: 1000,
-      y: 1000,
-      text: "Music Theory",
-      description:
-        "The study of the practices and possibilities of music, including harmony, rhythm, and composition.",
-      level: 0,
-    });
+    // Center on the middle node (index 4)
+    if (nodes.length >= 5) {
+      centerOnNode(nodes[4]);
+    }
   };
   // Generate AI-powered diverse starting topics
   const generateRandomStartingTopics = async () => {
@@ -218,7 +214,7 @@ export default function NodesPage() {
         const startingNodes: Node[] = topics
           .slice(0, 5)
           .map((topic: any, i: number) => ({
-            id: `node-${i + 1}`,
+            id: uuidv4(),
             x: centerX + Math.cos(pentagonAngles[i]) * radius,
             y: centerY + Math.sin(pentagonAngles[i]) * radius,
             text: topic.title || `AI Topic ${i + 1}`,
@@ -232,7 +228,6 @@ export default function NodesPage() {
           }));
 
         setNodes(startingNodes);
-        setNodeIdCounter(6); // Start from 6 since we have 5 initial nodes
 
         // Track the AI-generated topics to prevent duplicates
         const initialTopicTitles = startingNodes.map((node) =>
@@ -245,12 +240,14 @@ export default function NodesPage() {
           Array.from(initialTopicTitles)
         );
       } else {
-        console.error("❌ API failed, using enhanced fallback topics");
-        await generateEnhancedFallbackTopics();
+        console.error("❌ API failed - no fallback, AI must work properly");
+        throw new Error("Failed to generate initial topics");
       }
     } catch (error) {
       console.error("❌ Error generating AI topics:", error);
-      await generateEnhancedFallbackTopics();
+      throw new Error(
+        "Failed to generate initial topics - AI must work properly"
+      );
     }
   };
 
@@ -309,68 +306,7 @@ export default function NodesPage() {
     }
   };
 
-  // Enhanced fallback with more diverse topics
-  const generateEnhancedFallbackTopics = async () => {
-    const diverseFallbackTopics = [
-      {
-        title: "Artificial Intelligence",
-        description: "The simulation of human intelligence in machines",
-      },
-      {
-        title: "Climate Change",
-        description:
-          "Long-term shifts in global temperatures and weather patterns",
-      },
-      {
-        title: "Space Exploration",
-        description:
-          "The ongoing discovery and exploration of celestial structures",
-      },
-      {
-        title: "Quantum Physics",
-        description:
-          "The branch of physics dealing with atomic and subatomic behavior",
-      },
-      {
-        title: "Ancient History",
-        description:
-          "The study of human civilization from earliest recorded periods",
-      },
-    ];
-
-    const centerX = 1000;
-    const centerY = 1000;
-    const radius = 300;
-    const pentagonAngles = [0, 72, 144, 216, 288].map(
-      (deg) => (deg * Math.PI) / 180
-    );
-
-    const startingNodes: Node[] = diverseFallbackTopics.map((topic, i) => ({
-      id: `node-${i + 1}`,
-      x: centerX + Math.cos(pentagonAngles[i]) * radius,
-      y: centerY + Math.sin(pentagonAngles[i]) * radius,
-      text: topic.title,
-      description: topic.description,
-      level: 0,
-      isCurrentNode: false,
-      isClicked: false,
-      isBurrowed: false,
-    }));
-
-    setNodes(startingNodes);
-    setNodeIdCounter(6);
-
-    // Track the fallback topics to prevent duplicates
-    const fallbackTopicTitles = startingNodes.map((node) =>
-      node.text.toLowerCase()
-    );
-    setUsedTopics(new Set(fallbackTopicTitles));
-
-    console.log(
-      "🔄 Using enhanced fallback topics:",
-      Array.from(fallbackTopicTitles)
-    );
-  };
+  // No fallback topics - AI must work properly
 
   // Generate random starting topics on component mount
   useEffect(() => {
@@ -413,8 +349,11 @@ export default function NodesPage() {
 
   // Center the canvas on the middle node when component mounts
   useEffect(() => {
-    if (nodes.length > 0) {
-      const centerCanvas = () => centerOnNode(nodes[0]); // Center on first node
+    if (nodes.length >= 5) {
+      const centerCanvas = () => {
+        // Center on the middle node (index 2) for better view of all 5 initial nodes
+        centerOnNode(nodes[2]);
+      };
       // Center with a small delay to ensure container is rendered
       const timeoutId = setTimeout(centerCanvas, 100);
       // Also center on window resize
@@ -442,10 +381,10 @@ export default function NodesPage() {
       if (response.ok) {
         const data = await response.json();
         if (data.success && data.summary) {
-          // Update the node with the rich summary
+          // Update the node with the rich summary, but preserve original description if API fails
           setNodes((prevNodes) =>
             prevNodes.map((n) =>
-              n.id === node.id ? { ...n, description: data.summary } : n
+              n.id === node.id ? { ...n, richContent: data.summary } : n
             )
           );
         }
@@ -472,64 +411,11 @@ export default function NodesPage() {
     );
     setUsedTopics((prev) => new Set([...prev, ...newTopicTitles]));
 
-    // Ensure we always have exactly 5 topics
-    while (uniqueTopics.length < 5) {
-      const fallbackTitles = [
-        "Research",
-        "Applications",
-        "History",
-        "Future",
-        "Theory",
-        "Development",
-        "Innovation",
-        "Analysis",
-        "Study",
-        "Exploration",
-      ];
-      const fallbackDescriptions = [
-        "The systematic investigation of a subject to discover new information",
-        "Practical uses and implementations of theoretical concepts",
-        "The chronological record of past events and developments",
-        "Upcoming trends, technologies, and potential developments",
-        "The fundamental principles and frameworks underlying a field",
-        "The process of growth and advancement in a particular area",
-        "The introduction of new ideas, methods, or technologies",
-        "The detailed examination of components and their relationships",
-        "The focused investigation and learning about a specific subject",
-        "The act of traveling through an unfamiliar area to learn about it",
-      ];
-
-      // Find a fallback title that hasn't been used
-      let fallbackIndex = uniqueTopics.length;
-      while (
-        fallbackIndex < fallbackTitles.length &&
-        usedTopics.has(fallbackTitles[fallbackIndex].toLowerCase())
-      ) {
-        fallbackIndex++;
-      }
-
-      if (fallbackIndex < fallbackTitles.length) {
-        const newTopic = {
-          title: fallbackTitles[fallbackIndex],
-          description:
-            fallbackDescriptions[fallbackIndex] ||
-            "A related concept in this field.",
-        };
-        uniqueTopics.push(newTopic);
-        setUsedTopics(
-          (prev) => new Set([...prev, newTopic.title.toLowerCase()])
-        );
-      } else {
-        // If all fallbacks are used, create a unique topic
-        const uniqueTopic = {
-          title: `Topic ${uniqueTopics.length + 1}`,
-          description: "A related concept in this field.",
-        };
-        uniqueTopics.push(uniqueTopic);
-        setUsedTopics(
-          (prev) => new Set([...prev, uniqueTopic.title.toLowerCase()])
-        );
-      }
+    // If we don't have exactly 5 topics, the AI failed - throw error
+    if (uniqueTopics.length < 5) {
+      throw new Error(
+        `AI only generated ${uniqueTopics.length} topics instead of 5 - must generate exactly 5 topics`
+      );
     }
 
     // Use the filtered unique topics
@@ -559,7 +445,7 @@ export default function NodesPage() {
     for (let i = 0; i < 5; i++) {
       const position = positions[i];
       const newNode: Node = {
-        id: `node-${nodeIdCounter + i}`,
+        id: uuidv4(),
         x: position.x,
         y: position.y,
         text: finalTopics[i]?.title || `Topic ${i + 1}`,
@@ -580,7 +466,6 @@ export default function NodesPage() {
     // Update state
     setNodes((prev: Node[]) => [...prev, ...newNodes]);
     setConnections((prev) => [...prev, ...newConnections]);
-    setNodeIdCounter((prev) => prev + 5); // Always increment by 5
 
     // Center the view on the parent node
     setTimeout(() => centerOnNode(parentNode), 100);
@@ -1247,7 +1132,7 @@ export default function NodesPage() {
 
               return (
                 <line
-                  key={index}
+                  key={`${connection.from}-${connection.to}`}
                   x1={fromNode.x}
                   y1={fromNode.y}
                   x2={toNode.x}

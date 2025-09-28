@@ -220,18 +220,20 @@ export async function generateEnhancedTopics(
       - Focus on the most FASCINATING aspect
       - Examples: "Consciousness Mystery", "Time Dilation", "Lost Civilizations", "Quantum Entanglement"
       
-      DESCRIPTION REQUIREMENTS:
-      - Explain WHAT the topic is - just the facts about the concept
-      - Be factual and informative
-      - No guidance language like "worth exploring" or "fascinating to investigate"
-      - Just explain the concept itself, not why it's interesting
+      CRITICAL DESCRIPTION RULES:
+      - NO action words like "examine", "explore", "investigate", "discover", "delve into"
+      - NO guiding language like "debate", "discussion", "worth studying"
+      - NO persuasive phrases like "fascinating to learn about"
+      - ONLY factual explanations of what the topic IS
+      - Write like a comprehensive encyclopedia entry (2-3 sentences minimum)
+      - Provide detailed factual information about the concept itself
       
       Examples of good descriptions:
-      - "Consciousness Mystery": "The study of how subjective experience emerges from physical brain processes"
-      - "Time Dilation": "The phenomenon where time passes differently for observers in different reference frames"
-      - "Lost Civilizations": "Ancient societies that disappeared from historical records, leaving behind archaeological evidence"
+      - "Consciousness Mystery": "The study of how subjective experience emerges from physical brain processes. This field examines the relationship between mental states and physical brain activity, investigating how awareness and perception arise from neural networks."
+      - "Time Dilation": "The phenomenon where time passes differently for observers in different reference frames, as predicted by Einstein's theory of relativity. This effect becomes significant at high velocities or in strong gravitational fields."
+      - "Lost Civilizations": "Ancient societies that disappeared from historical records, leaving behind archaeological evidence of their existence. These civilizations often had advanced technologies, complex social structures, and cultural achievements that were lost to time."
       
-      Examples of bad descriptions (too guiding):
+      Examples of bad descriptions (NO MORE):
       - "The profound puzzle that makes people want to explore further"
       - "Einstein's mind-bending discovery that challenges understanding"
       - "Ancient societies that vanished mysteriously and spark curiosity"
@@ -250,7 +252,7 @@ export async function generateEnhancedTopics(
                 description: z
                   .string()
                   .describe(
-                    "Clear, factual explanation of what this topic is - explain the concept itself, not why it's worth exploring"
+                    "Detailed factual description at least 2-3 sentences long, like an encyclopedia entry - NO action words (examine, explore, investigate), NO guiding language (debate, discussion), just comprehensive facts about what the topic IS"
                   ),
               })
             ),

@@ -1,34 +1,36 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
-  const [animationState, setAnimationState] = useState<'idle' | 'scrolling' | 'plane3d' | 'diving' | 'transformed'>('idle');
+  const [animationState, setAnimationState] = useState<
+    "idle" | "scrolling" | "plane3d" | "diving" | "transformed"
+  >("idle");
   const [scrollProgress, setScrollProgress] = useState(0);
   const router = useRouter();
   const handleTakeMeClick = () => {
-    setAnimationState('scrolling');
-    
+    setAnimationState("scrolling");
+
     // Smooth scroll animation with page scroll
-    const scrollDuration = 2000; 
+    const scrollDuration = 2000;
     const startTime = Date.now();
-    
+
     const scrollAnimation = () => {
       const elapsed = Date.now() - startTime;
       const progress = Math.min(elapsed / scrollDuration, 1);
-      
+
       setScrollProgress(progress);
-      
+
       // Scroll the page to match the gradient expansion with smooth easing
       const scrollAmount = progress * window.innerHeight;
-      
+
       // Use requestAnimationFrame for smoother scrolling
       const smoothScroll = () => {
         const currentScroll = window.pageYOffset;
         const targetScroll = scrollAmount;
         const diff = targetScroll - currentScroll;
-        
+
         if (Math.abs(diff) > 0.5) {
           window.scrollTo(0, currentScroll + diff * 0.1);
           requestAnimationFrame(smoothScroll);
@@ -36,22 +38,22 @@ export default function Home() {
           window.scrollTo(0, targetScroll);
         }
       };
-      
+
       requestAnimationFrame(smoothScroll);
-      
+
       if (progress < 1) {
         requestAnimationFrame(scrollAnimation);
       } else {
         // Show 3D plane after scroll completes
-        setTimeout(() => setAnimationState('plane3d'), 200);
+        setTimeout(() => setAnimationState("plane3d"), 200);
         // Start diving animation and navigation
         setTimeout(() => {
-          setAnimationState('diving');
-          setTimeout(() => router.push('../nodes'), 1000);
+          setAnimationState("diving");
+          setTimeout(() => router.push("../nodes"), 1000);
         }, 1000);
       }
     };
-    
+
     requestAnimationFrame(scrollAnimation);
   };
 

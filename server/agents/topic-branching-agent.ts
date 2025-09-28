@@ -331,7 +331,15 @@ export async function generateTopicBranches(
       - "Synesthesia", "Time Travel", "Collective Unconscious", "Black Holes", "Digital Consciousness"
       
       Think of topics that make people go "WOW, I need to know more about this!" 
-      Focus on mysteries, breakthroughs, paradoxes, and mind-bending concepts that are genuinely fascinating!`,
+      Focus on mysteries, breakthroughs, paradoxes, and mind-bending concepts that are genuinely fascinating!
+      
+      CRITICAL DESCRIPTION RULES:
+      - NO action words like "examine", "explore", "investigate", "discover", "delve into"
+      - NO guiding language like "debate", "discussion", "worth studying"
+      - NO persuasive phrases like "fascinating to learn about"
+      - ONLY factual explanations of what the topic IS
+      - Write like a dictionary or encyclopedia entry
+      - Just state the facts about the concept itself`,
       {
         structuredOutput: {
           schema: z.object({
@@ -346,7 +354,7 @@ export async function generateTopicBranches(
                   description: z
                     .string()
                     .describe(
-                      "Purely informative description that explains what this topic is - just the facts, no persuasive language"
+                      "Detailed factual description at least 2-3 sentences long, like an encyclopedia entry - NO action words (examine, explore, investigate), NO guiding language (debate, discussion), just comprehensive facts about what the topic IS"
                     ),
                 })
               )
@@ -363,37 +371,10 @@ export async function generateTopicBranches(
       return response.object.topics;
     }
 
-    // Fallback if AI fails
-    const fallbackTopics = [
-      {
-        title: "Consciousness Mystery",
-        description:
-          "The study of how subjective experience emerges from physical brain processes",
-      },
-      {
-        title: "Time Dilation",
-        description:
-          "The phenomenon where time passes differently for observers in different reference frames",
-      },
-      {
-        title: "Lost Civilizations",
-        description:
-          "Ancient societies that disappeared from historical records, leaving behind archaeological evidence",
-      },
-      {
-        title: "Quantum Entanglement",
-        description:
-          "The quantum mechanical phenomenon where particles become interconnected regardless of distance",
-      },
-      {
-        title: "Digital Immortality",
-        description:
-          "The concept of preserving human consciousness or identity in digital form",
-      },
-    ];
-
-    console.log(`✅ Using fallback random starting topics`);
-    return fallbackTopics;
+    // No fallback - force the AI to think and generate proper topics
+    throw new Error(
+      "Failed to generate random starting topics - AI must think harder"
+    );
   }
 
   try {
@@ -415,7 +396,15 @@ Each topic should be:
 4. Have purely informative descriptions that explain what the topic is
 5. NOT already used in the graph
 
-Start by searching for: "${topic}"`,
+Start by searching for: "${topic}"
+
+CRITICAL DESCRIPTION RULES:
+- NO action words like "examine", "explore", "investigate", "discover", "delve into"
+- NO guiding language like "debate", "discussion", "worth studying"  
+- NO persuasive phrases like "fascinating to learn about"
+- ONLY factual explanations of what the topic IS
+- Write like a comprehensive encyclopedia entry (2-3 sentences minimum)
+- Provide detailed factual information about the concept itself`,
       {
         structuredOutput: {
           schema: z.object({
@@ -430,7 +419,7 @@ Start by searching for: "${topic}"`,
                   description: z
                     .string()
                     .describe(
-                      "Purely informative description that explains what this topic is - just the facts, no persuasive language"
+                      "Detailed factual description at least 2-3 sentences long, like an encyclopedia entry - NO action words (examine, explore, investigate), NO guiding language (debate, discussion), just comprehensive facts about what the topic IS"
                     ),
                 })
               )
@@ -451,30 +440,9 @@ Start by searching for: "${topic}"`,
   } catch (error) {
     console.error(`❌ Error generating topic branches:`, error);
 
-    // Fallback topics if everything fails
-    const fallbackTopics = [
-      {
-        title: "Research",
-        description: "The systematic investigation of this subject",
-      },
-      {
-        title: "Applications",
-        description: "Practical uses and implementations",
-      },
-      {
-        title: "History",
-        description: "The chronological development of this field",
-      },
-      {
-        title: "Future",
-        description: "Upcoming trends and potential developments",
-      },
-      {
-        title: "Theory",
-        description: "The fundamental principles underlying this concept",
-      },
-    ];
-
-    return fallbackTopics;
+    // No fallback - force the AI to think and generate proper topics
+    throw new Error(
+      "Failed to generate topic branches - AI must think harder and use Wikipedia content properly"
+    );
   }
 }

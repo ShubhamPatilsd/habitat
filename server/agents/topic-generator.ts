@@ -5,12 +5,14 @@ import { z } from "zod";
 // Verify OpenAI configuration
 const apiKey = process.env.OPENAI_API_KEY;
 if (!apiKey) {
-  console.error('OPENAI_API_KEY is not configured');
-  throw new Error('OpenAI API key is not configured. Please check your environment variables.');
+  console.error("OPENAI_API_KEY is not configured");
+  throw new Error(
+    "OpenAI API key is not configured. Please check your environment variables."
+  );
 }
-console.log('OpenAI API key is configured');
+console.log("OpenAI API key is configured");
 
-console.log('Initializing topic generator agent with model: gpt-4');
+console.log("Initializing topic generator agent with model: gpt-4");
 
 export const topicGeneratorAgent = new Agent({
   name: "Topic Generator",
@@ -28,17 +30,21 @@ export const topicGeneratorAgent = new Agent({
     Each topic should be a single, clear concept that someone could dive deeper into.
     Keep titles concise (2-4 words) and descriptions brief (1-2 sentences).
   `,
-  model: openai("gpt-4"),
+  model: openai("gpt-5"),
 });
 
 // Helper function to generate topics
 export async function generateRelatedTopics(
-  topic: string
+  topic: string,
+  journeyContext: string = "",
+  count: number = 3
 ): Promise<Array<{ title: string; description: string }>> {
-  console.log('Generating topics for:', topic);
+  console.log("Generating topics for:", topic, "with context:", journeyContext);
   try {
     const response = await topicGeneratorAgent.generate(
-      `Generate 10 interesting related topics to explore from "${topic}". Make them diverse and lead to different rabbit holes.`,
+      `Generate exactly ${count} interesting related topics to explore from "${topic}". Make them diverse and lead to different rabbit holes.${journeyContext}
+
+Focus on topics that build on the user's exploration path and offer new directions to explore.`,
       {
         structuredOutput: {
           schema: z.object({
@@ -54,14 +60,14 @@ export async function generateRelatedTopics(
     );
 
     if (!response?.object?.topics) {
-      console.error('Invalid response format:', response);
-      throw new Error('Invalid response format from AI');
+      console.error("Invalid response format:", response);
+      throw new Error("Invalid response format from AI");
     }
 
-    console.log('Generated topics:', response.object.topics);
+    console.log("Generated topics:", response.object.topics);
     return response.object.topics;
   } catch (error) {
-    console.error('Error in topic generation:', error);
+    console.error("Error in topic generation:", error);
     throw error;
   }
 }

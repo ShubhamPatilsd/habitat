@@ -1,10 +1,11 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 interface Node {
   id: string;
   x: number;
   y: number;
   text: string;
+  description?: string; // Add description field
   level: number;
   parentId?: string;
   isClicked?: boolean;
@@ -17,7 +18,9 @@ export default function NodesPage() {
       id: "root",
       x: 1000,
       y: 1000,
-      text: "Start",
+      text: "Artificial Intelligence",
+      description:
+        "The simulation of human intelligence in machines that are programmed to think and learn like humans.",
       level: 0,
       isCurrentNode: false, // Changed: Start node is blue, not current
     },
@@ -33,13 +36,17 @@ export default function NodesPage() {
   const [isPhysicsEnabled, setIsPhysicsEnabled] = useState(true);
   const [topics, setTopics] = useState<string[]>(["next1"]);
   const [currTopic, setCurrTopic] = useState<string>("next1");
+  const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<number | null>(null);
   // popup + fullscreen states
   const [hoveredNode, setHoveredNode] = useState<Node | null>(null);
   const [showPopup, setShowPopup] = useState(false);
+  const [popupVisible, setPopupVisible] = useState(false);
+  const [popupPosition, setPopupPosition] = useState({ x: 0, y: 0 });
   const [expandedNode, setExpandedNode] = useState<Node | null>(null);
   const [hoverTimer, setHoverTimer] = useState<NodeJS.Timeout | null>(null);
+  const lastPositionRef = useRef({ x: 0, y: 0 });
   // Function to center the view on a specific node
   const centerOnNode = (node: Node) => {
     if (containerRef.current) {
@@ -81,13 +88,13 @@ export default function NodesPage() {
   };
   const handleBurrow = () => {
     // Find the current node and transform it into a burrow
-    const currentNode = nodes.find(node => node.isCurrentNode);
-    
+    const currentNode = nodes.find((node) => node.isCurrentNode);
+
     if (currentNode) {
       // Mark the current node as burrowed (removes text and makes it look like a hole)
-      setNodes(prev => 
-        prev.map(node => 
-          node.id === currentNode.id 
+      setNodes((prev) =>
+        prev.map((node) =>
+          node.id === currentNode.id
             ? { ...node, isBurrowed: true, isCurrentNode: false }
             : node
         )
@@ -95,8 +102,8 @@ export default function NodesPage() {
     }
     try {
       // Save current state with the burrow applied
-      const nodesWithBurrow = nodes.map(node => 
-        currentNode && node.id === currentNode.id 
+      const nodesWithBurrow = nodes.map((node) =>
+        currentNode && node.id === currentNode.id
           ? { ...node, isBurrowed: true, isCurrentNode: false }
           : node
       );
@@ -108,9 +115,28 @@ export default function NodesPage() {
     setTopics((prev) => [...prev, `next${prev.length + 1}`]);
     setCurrTopic("next" + (topics.length + 1));
     // reset graph - start node is blue, not current
-    setNodes([{ id: "root", x: 1000, y: 1000, text: "Start", level: 0, isCurrentNode: false }]);
+    setNodes([
+      {
+        id: "root",
+        x: 1000,
+        y: 1000,
+        text: "Artificial Intelligence",
+        description:
+          "The simulation of human intelligence in machines that are programmed to think and learn like humans.",
+        level: 0,
+        isCurrentNode: false,
+      },
+    ]);
     setConnections([]);
-    centerOnNode({ id: "root", x: 1000, y: 1000, text: "Start", level: 0 });
+    centerOnNode({
+      id: "root",
+      x: 1000,
+      y: 1000,
+      text: "Artificial Intelligence",
+      description:
+        "The simulation of human intelligence in machines that are programmed to think and learn like humans.",
+      level: 0,
+    });
   };
   // Center the canvas on the starting node when component mounts
   useEffect(() => {
@@ -124,10 +150,76 @@ export default function NodesPage() {
       window.removeEventListener("resize", centerCanvas);
     };
   }, []);
-  const generateNewNodes = (parentNode: Node) => {
+  const generateNewNodes = async (parentNode: Node) => {
+    setIsGenerating(true);
     const newNodes: Node[] = [];
     const newConnections: { from: string; to: string }[] = [];
-    const radius = 300; // Base radius for spacing
+    const radius = 400; // Base radius for spacing (increased for bigger circles)
+
+    // Generate topics from API with journey context
+    let topics: Array<{ title: string; description: string }> = [];
+    try {
+      // Build journey path for context
+      const journeyPath = [];
+      let currentNode = parentNode;
+      while (currentNode && journeyPath.length < 5) {
+        journeyPath.unshift(currentNode.text);
+        currentNode = nodes.find((n) => n.id === currentNode.parentId);
+      }
+
+      const response = await fetch("/api/explore-topic", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          topic: parentNode.text,
+          journey: journeyPath,
+          // Request fewer topics for faster generation
+          count: 3,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        topics = data.topics || [];
+      } else {
+        console.error("Failed to generate topics:", response.statusText);
+        // Fallback to generic topics
+        topics = [
+          {
+            title: "Related Topic 1",
+            description: "A related concept to explore further.",
+          },
+          {
+            title: "Related Topic 2",
+            description: "Another interesting area to investigate.",
+          },
+          {
+            title: "Related Topic 3",
+            description: "A third pathway for exploration.",
+          },
+        ];
+      }
+    } catch (error) {
+      console.error("Error generating topics:", error);
+      // Fallback to generic topics
+      topics = [
+        {
+          title: "Related Topic 1",
+          description: "A related concept to explore further.",
+        },
+        {
+          title: "Related Topic 2",
+          description: "Another interesting area to investigate.",
+        },
+        {
+          title: "Related Topic 3",
+          description: "A third pathway for exploration.",
+        },
+      ];
+    }
+
     // Determine if this is the root node (no parent)
     const isRootNode = !parentNode.parentId;
     if (isRootNode) {
@@ -141,7 +233,9 @@ export default function NodesPage() {
           id: `${parentNode.id}-${i}`,
           x,
           y,
-          text: `Node ${i + 1}`,
+          text: topics[i]?.title || `Topic ${i + 1}`,
+          description:
+            topics[i]?.description || `A related concept to explore further.`,
           level: parentNode.level + 1,
           parentId: parentNode.id,
         };
@@ -189,7 +283,9 @@ export default function NodesPage() {
             id: `${parentNode.id}-${i}`,
             x,
             y,
-            text: `Node ${i + 1}`,
+            text: topics[i]?.title || `Topic ${i + 1}`,
+            description:
+              topics[i]?.description || `A related concept to explore further.`,
             level: parentNode.level + 1,
             parentId: parentNode.id,
           };
@@ -203,10 +299,11 @@ export default function NodesPage() {
     setConnections((prev) => [...prev, ...newConnections]);
     // Center the view on the parent node after adding new nodes
     setTimeout(() => centerOnNode(parentNode), 100);
+    setIsGenerating(false);
   };
-  const handleNodeClick = (node: Node, event: React.MouseEvent) => {
+  const handleNodeClick = async (node: Node, event: React.MouseEvent) => {
     if (isDragging) return;
-    
+
     // Don't allow clicking on burrowed nodes
     if (node.isBurrowed) return;
     // If clicking on a grey node (previously visited), open fullscreen
@@ -229,7 +326,7 @@ export default function NodesPage() {
       // Generate children if they don't exist
       const hasChildren = nodes.some((n) => n.parentId === node.id);
       if (!hasChildren) {
-        generateNewNodes(node);
+        await generateNewNodes(node);
       }
     }
   };
@@ -247,6 +344,64 @@ export default function NodesPage() {
       y: lastOffset.y + deltaY,
     });
   };
+
+  // Simple throttle function for popup mouse tracking
+  function throttle<T extends (...args: any[]) => any>(
+    func: T,
+    limit: number
+  ): (...args: Parameters<T>) => void {
+    let inThrottle: boolean = false;
+    return function (this: any, ...args: Parameters<T>): void {
+      if (!inThrottle) {
+        func.apply(this, args);
+        inThrottle = true;
+        setTimeout(() => (inThrottle = false), limit);
+      }
+    };
+  }
+
+  // Throttled mouse move handler for popup positioning
+  const handlePopupMouseMove = useCallback(
+    throttle((e: React.MouseEvent) => {
+      if (showPopup) {
+        const newX = e.clientX + 20;
+        const newY = e.clientY - 50;
+
+        if (
+          Math.abs(newX - lastPositionRef.current.x) > 5 ||
+          Math.abs(newY - lastPositionRef.current.y) > 5
+        ) {
+          const position = { x: newX, y: newY };
+          lastPositionRef.current = position;
+          setPopupPosition(position);
+        }
+      }
+    }, 16),
+    [showPopup]
+  );
+
+  const handleNodeMouseEnter = useCallback(
+    (e: React.MouseEvent, node: Node) => {
+      // Show popup for all nodes except burrowed ones
+      if (!node.isBurrowed) {
+        const position = {
+          x: e.clientX + 20,
+          y: e.clientY - 50,
+        };
+
+        lastPositionRef.current = position;
+        setPopupPosition(position);
+        setHoveredNode(node);
+        setShowPopup(true);
+      }
+    },
+    []
+  );
+
+  const handleNodeMouseLeave = useCallback(() => {
+    setHoveredNode(null);
+    setShowPopup(false);
+  }, []);
   const handleMouseUp = () => {
     setIsDragging(false);
   };
@@ -259,7 +414,7 @@ export default function NodesPage() {
     const zoomFactor = 0.1;
     const newZoom = Math.max(
       0.1,
-      Math.min(5, zoom + (delta > 0 ? -zoomFactor : zoomFactor))
+      Math.min(10, zoom + (delta > 0 ? -zoomFactor : zoomFactor))
     );
     if (containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
@@ -345,39 +500,53 @@ export default function NodesPage() {
       }
     };
   }, [isPhysicsEnabled]);
-const handleTopicClick = (topic: string) => {
-  try {
-    // Save current topic state
-    localStorage.setItem(currTopic, JSON.stringify(nodes));
-  } catch (error) {
-    console.error("Failed to save nodes to local storage:", error);
-  }
-  try {
-    const savedNodesJson = localStorage.getItem(topic);
-    if (savedNodesJson) {
-      const foundNodes = JSON.parse(savedNodesJson) as Node[];
-      setNodes(foundNodes);
-      setConnections([]);
 
-      // ✅ Reset zoom + center on root node after switching
-      setTimeout(() => {
-        if (foundNodes.length > 0) {
-          setZoom(1); // reset zoom
-          centerOnNode(foundNodes[0]); // center on root
-        }
-      }, 50);
+  // Handle popup visibility with smooth transition
+  useEffect(() => {
+    let timeout: NodeJS.Timeout;
+    if (showPopup) {
+      timeout = setTimeout(() => {
+        setPopupVisible(true);
+      }, 10);
+    } else {
+      setPopupVisible(false);
     }
-  } catch (error) {
-    console.error(`Failed to load nodes for topic ${topic}:`, error);
-  }
-  setCurrTopic(topic);
-};
+    return () => clearTimeout(timeout);
+  }, [showPopup]);
+  const handleTopicClick = (topic: string) => {
+    try {
+      // Save current topic state
+      localStorage.setItem(currTopic, JSON.stringify(nodes));
+    } catch (error) {
+      console.error("Failed to save nodes to local storage:", error);
+    }
+    try {
+      const savedNodesJson = localStorage.getItem(topic);
+      if (savedNodesJson) {
+        const foundNodes = JSON.parse(savedNodesJson) as Node[];
+        setNodes(foundNodes);
+        setConnections([]);
+
+        // ✅ Reset zoom + center on root node after switching
+        setTimeout(() => {
+          if (foundNodes.length > 0) {
+            setZoom(1); // reset zoom
+            centerOnNode(foundNodes[0]); // center on root
+          }
+        }, 50);
+      }
+    } catch (error) {
+      console.error(`Failed to load nodes for topic ${topic}:`, error);
+    }
+    setCurrTopic(topic);
+  };
   // Function to get node style based on state
   const getNodeStyle = (node: Node) => {
     if (node.isBurrowed) {
       // Burrow appearance - brown hole-like style with no text
       return {
-        background: "radial-gradient(circle at center, #8B4513 0%, #654321 60%, #3D2B1F 100%)",
+        background:
+          "radial-gradient(circle at center, #8B4513 0%, #654321 60%, #3D2B1F 100%)",
         boxShadow: "inset 0 -8px 20px rgba(0,0,0,0.6)",
         transform: "perspective(300px) rotateX(45deg)",
       };
@@ -447,7 +616,7 @@ const handleTopicClick = (topic: string) => {
 
       // Zoom handling
       if (event.key === "+" || event.key === "=") {
-        setZoom((prev) => Math.min(5, prev + 0.05));
+        setZoom((prev) => Math.min(10, prev + 0.05));
       }
       if (event.key === "-") {
         setZoom((prev) => Math.max(0.1, prev - 0.05));
@@ -556,6 +725,11 @@ const handleTopicClick = (topic: string) => {
       </div>
       {/* Control buttons */}
       <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
+        {isGenerating && (
+          <div className="px-4 py-2 bg-yellow-500 text-white rounded-lg shadow-lg text-sm font-medium animate-pulse">
+            Generating topics...
+          </div>
+        )}
         <button
           onClick={handleBurrow}
           className="px-4 py-2 bg-[#1e00ff] text-[#fff0d2] rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 text-sm font-medium"
@@ -579,7 +753,10 @@ const handleTopicClick = (topic: string) => {
         ref={containerRef}
         className="absolute inset-0 cursor-grab active:cursor-grabbing"
         onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
+        onMouseMove={(e) => {
+          handleMouseMove(e);
+          handlePopupMouseMove(e);
+        }}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseLeave}
         onWheel={handleWheel}
@@ -607,26 +784,11 @@ const handleTopicClick = (topic: string) => {
                 top: node.y,
               }}
               onClick={(e) => handleNodeClick(node, e)}
-              onMouseEnter={() => {
-                if (node.isClicked && !node.isCurrentNode && !node.isBurrowed) {
-                  const timer = setTimeout(() => {
-                    setHoveredNode(node);
-                    setShowPopup(true);
-                  }, 400);
-                  setHoverTimer(timer);
-                }
-              }}
-              onMouseLeave={() => {
-                if (node.isClicked && !node.isCurrentNode && !node.isBurrowed) {
-                  if (hoverTimer) clearTimeout(hoverTimer);
-                  setHoverTimer(null);
-                  setHoveredNode(null);
-                  setShowPopup(false);
-                }
-              }}
+              onMouseEnter={(e) => handleNodeMouseEnter(e, node)}
+              onMouseLeave={handleNodeMouseLeave}
             >
               <div
-                className="w-16 h-16 rounded-full text-[#fff0d2] flex items-center justify-center text-sm font-medium shadow-lg hover:shadow-xl transition-all duration-300"
+                className="w-24 h-24 rounded-full text-[#fff0d2] flex items-center justify-center text-sm font-medium shadow-lg hover:shadow-xl transition-all duration-300 relative overflow-hidden"
                 style={{
                   ...getNodeStyle(node),
                   animation:
@@ -634,7 +796,19 @@ const handleTopicClick = (topic: string) => {
                 }}
               >
                 {/* Only show text if not burrowed */}
-                {!node.isBurrowed && node.text}
+                {!node.isBurrowed && (
+                  <div className="w-full h-full flex items-center justify-center p-2">
+                    <div className="text-center leading-tight w-full">
+                      <div className="text-xs leading-tight">
+                        {node.text.split(" ").map((word, i) => (
+                          <div key={i} className="truncate">
+                            {word}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           ))}
@@ -651,21 +825,73 @@ const handleTopicClick = (topic: string) => {
             opacity: 1;
           }
         }
+
+        .pop-animation {
+          opacity: 1;
+          transform: scale(1);
+          animation: popIn 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+        }
+
+        @keyframes popIn {
+          0% {
+            opacity: 0;
+            transform: scale(0.95) translateY(5px);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+          }
+        }
       `}</style>
-      {/* Hover popup */}
-      {showPopup && hoveredNode && (
+      {/* Enhanced Hover popup - matching website-v3 exactly */}
+      {hoveredNode && (
         <div
-          className="absolute bg-white shadow-lg rounded-lg p-4 z-50"
+          className={`fixed z-50 w-[max(17vw,200px)] rounded-2xl shadow-2xl pointer-events-none transition-all duration-300 ${
+            popupVisible
+              ? "pop-animation"
+              : "opacity-0 scale-95 origin-bottom-left"
+          }`}
           style={{
-            // project node position into screen space
-            left: hoveredNode.x * zoom + canvasOffset.x + 80,
-            top: hoveredNode.y * zoom + canvasOffset.y - 40,
-            width: "200px",
-            transform: "translate(-50%, -100%)", // keep it centered above
+            left: `${popupPosition.x}px`,
+            top: `${popupPosition.y + 50}px`,
+            transformOrigin: "top left",
+            transition:
+              "left 0.1s ease-out, top 0.1s ease-out, opacity 0.2s ease, transform 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28)",
           }}
         >
-          <h3 className="font-semibold">{hoveredNode.text}</h3>
-          <p className="text-sm text-gray-600">Quick preview content…</p>
+          <div
+            className="relative h-[max(11vw,132px)] w-full overflow-hidden rounded-2xl"
+            style={{
+              backgroundImage: hoveredNode.isCurrentNode
+                ? "linear-gradient(135deg, #D2B48C 0%, #DEB887 50%, #F5DEB3 100%)"
+                : hoveredNode.isClicked
+                ? "linear-gradient(135deg, #808080 0%, #A0A0A0 50%, #C0C0C0 100%)"
+                : "linear-gradient(135deg, #1e00ff 0%, #4a90e2 50%, #87ceeb 100%)",
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              backgroundRepeat: "no-repeat",
+            }}
+            role="img"
+            aria-label={hoveredNode.text}
+          >
+            <div className="absolute inset-0 bg-black bg-opacity-20"></div>
+            <div className="relative z-10 p-4 h-full flex flex-col justify-center text-white">
+              <h3 className="font-semibold text-lg truncate mb-1">
+                {hoveredNode.text}
+              </h3>
+              <p className="text-xs opacity-90 mb-2">
+                Level {hoveredNode.level} •{" "}
+                {hoveredNode.isCurrentNode
+                  ? "Current"
+                  : hoveredNode.isClicked
+                  ? "Visited"
+                  : "Unvisited"}
+              </p>
+              <p className="text-xs opacity-80 leading-tight">
+                {hoveredNode.description || "No description available."}
+              </p>
+            </div>
+          </div>
         </div>
       )}
       {/* Fullscreen expanded */}
@@ -679,7 +905,10 @@ const handleTopicClick = (topic: string) => {
               Close
             </button>
             <h2 className="text-xl font-bold mb-4">{expandedNode.text}</h2>
-            <p className="text-gray-700">
+            <p className="text-gray-700 mb-4">
+              {expandedNode.description || "No description available."}
+            </p>
+            <p className="text-gray-500 text-sm">
               Expanded rabbit hole content goes here.
             </p>
           </div>

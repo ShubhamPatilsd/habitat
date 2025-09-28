@@ -39,8 +39,10 @@ export default function NodesPage() {
   );
   const [zoom, setZoom] = useState(1);
   const [isPhysicsEnabled, setIsPhysicsEnabled] = useState(true);
-  const [topics, setTopics] = useState<string[]>(["next1"]);
-  const [currTopic, setCurrTopic] = useState<string>("next1");
+  const [explorationPath, setExplorationPath] = useState<
+    Array<{ id: string; title: string }>
+  >([]);
+  const [currentTopicId, setCurrentTopicId] = useState<string>("");
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<number | null>(null);
@@ -129,12 +131,9 @@ export default function NodesPage() {
     } catch (error) {
       console.error("Failed to save nodes to local storage:", error);
     }
-    // ✅ just update topics & reset canvas
-    setTopics((prev) => {
-      const nextTopic = `next${prev.length + 1}`;
-      setCurrTopic(nextTopic);
-      return [...prev, nextTopic];
-    });
+    // Reset exploration path
+    setExplorationPath([]);
+    setCurrentTopicId("");
 
     // reset graph - start with 5 diverse topics
     setNodes([
@@ -253,6 +252,14 @@ export default function NodesPage() {
           node.text.toLowerCase()
         );
         setUsedTopics(new Set(initialTopicTitles));
+
+        // Set the first topic as the starting point of exploration
+        if (startingNodes.length > 0) {
+          setExplorationPath([
+            { id: startingNodes[0].id, title: startingNodes[0].text },
+          ]);
+          setCurrentTopicId(startingNodes[0].id);
+        }
 
         console.log(
           "🎯 Initial topics tracked:",
@@ -692,6 +699,13 @@ export default function NodesPage() {
             };
           })
         );
+
+        // Add this node to the exploration path
+        setExplorationPath((prev) => [
+          ...prev,
+          { id: node.id, title: node.text },
+        ]);
+        setCurrentTopicId(node.id);
       }
       // Fetch rich summary for the clicked node
       await fetchRichSummary(node);
@@ -1067,19 +1081,28 @@ export default function NodesPage() {
     >
       {/* Isometric 3D stack display with max 10 + underline current */}
       <div className="fixed left-4 top-4 z-50">
-        <svg width="260" height={Math.min(topics.length, 10) * 80 + 100}>
-          {topics.slice(0, 10).map((topic, i) => {
+        <svg
+          width="260"
+          height={Math.min(explorationPath.length, 10) * 80 + 100}
+        >
+          {explorationPath.slice(0, 10).map((pathItem, i) => {
             const x = 40;
             const y = 40 + i * 60; // vertical stacking
             const width = 160;
             const height = 40;
             const depth = 12;
-            const isActive = currTopic === topic; // ✅ check if this panel is current
+            const isActive = currentTopicId === pathItem.id; // ✅ check if this panel is current
             return (
               <g
-                key={topic}
+                key={pathItem.id}
                 className="cursor-pointer"
-                onClick={() => handleTopicClick(topic)}
+                onClick={() => {
+                  // Find the node and center on it
+                  const node = nodes.find((n) => n.id === pathItem.id);
+                  if (node) {
+                    centerOnNode(node);
+                  }
+                }}
               >
                 {/* Top face */}
                 <polygon
@@ -1128,7 +1151,7 @@ export default function NodesPage() {
                   fontWeight="bold"
                   textDecoration={isActive ? "underline" : "none"} // ✅ underline active
                 >
-                  {topic}
+                  {pathItem.title}
                 </text>
               </g>
             );

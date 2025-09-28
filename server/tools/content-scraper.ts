@@ -5,209 +5,139 @@ import { openai } from "@ai-sdk/openai";
 
 export const contentScraperTool = createTool({
   id: "content-scraper",
-  description:
-    "Scrapes and summarizes real information about topics from the web",
+  description: "Scrapes and summarizes rich content about a given topic",
   inputSchema: z.object({
-    topic: z.string().describe("The topic to research and summarize"),
+    topic: z.string().describe("The topic to scrape content for"),
   }),
   execute: async ({ context }) => {
-    const { topic } = context;
+    const topic = context.topic;
+    console.log(`🔄 Scraping content for: ${topic}`);
+
     try {
-      console.log(`🔍 Searching for real Wikipedia content about: ${topic}`);
+      // Get rich content using the PROPER Wikipedia full-text search
+      const richContent = await generateRichContent(topic);
 
-      let realContent = null;
-      let sources = [];
+      // Extract key concepts using AI
+      const keyConcepts = await extractKeyConcepts(richContent.overview, topic);
 
-      // Step 1: Use Wikipedia OpenSearch API to find the best matching article
-      try {
-        const searchQuery = encodeURIComponent(topic);
-        const openSearchUrl = `https://en.wikipedia.org/w/api.php?action=opensearch&search=${searchQuery}&limit=1&namespace=0&format=json`;
-
-        console.log(`📚 Step 1 - OpenSearch API: ${openSearchUrl}`);
-        const searchResponse = await fetch(openSearchUrl);
-
-        if (searchResponse.ok) {
-          const searchData = await searchResponse.json();
-
-          if (searchData[1] && searchData[1].length > 0) {
-            const articleTitle = searchData[1][0];
-            const articleUrl = searchData[3][0];
-
-            console.log(`✅ Found Wikipedia article: ${articleTitle}`);
-
-            // Step 2: Get the full article content using the article title
-            const articleQuery = encodeURIComponent(articleTitle);
-            const articleUrl_api = `https://en.wikipedia.org/api/rest_v1/page/summary/${articleQuery}`;
-
-            console.log(
-              `📖 Step 2 - Getting article content: ${articleUrl_api}`
-            );
-            const articleResponse = await fetch(articleUrl_api);
-
-            if (articleResponse.ok) {
-              const articleData = await articleResponse.json();
-
-              if (
-                articleData.extract &&
-                !articleData.type?.includes("disambiguation")
-              ) {
-                console.log(
-                  `✅ Successfully scraped Wikipedia content for: ${topic}`
-                );
-
-                // Extract key concepts from the content using AI
-                const extract = articleData.extract;
-
-                // Use AI to extract meaningful concepts from the Wikipedia content
-                const keyConcepts = await extractKeyConcepts(extract, topic);
-
-                realContent = {
-                  overview: extract,
-                  keyConcepts: keyConcepts,
-                  applications: [],
-                  currentResearch: [],
-                  interestingFacts: [extract],
-                  summary: extract,
-                };
-                sources = [articleUrl];
-              }
-            }
-          }
-        }
-      } catch (wikiError) {
-        console.log(
-          `❌ Wikipedia scraping failed for ${topic}:`,
-          wikiError.message
-        );
-      }
-
-      // Fallback: Try the old Wikipedia summary API
-      if (!realContent) {
-        try {
-          const wikiQuery = encodeURIComponent(topic);
-          const wikiUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${wikiQuery}`;
-
-          console.log(`🔄 Fallback - Wikipedia summary API: ${wikiUrl}`);
-          const wikiResponse = await fetch(wikiUrl);
-
-          if (wikiResponse.ok) {
-            const wikiData = await wikiResponse.json();
-
-            if (
-              wikiData.extract &&
-              !wikiData.type?.includes("disambiguation")
-            ) {
-              console.log(`✅ Found Wikipedia fallback content for: ${topic}`);
-              realContent = {
-                overview: wikiData.extract,
-                keyConcepts: [],
-                applications: [],
-                currentResearch: [],
-                interestingFacts: [wikiData.extract],
-                summary: wikiData.extract,
-              };
-              sources = [
-                wikiData.content_urls?.desktop?.page ||
-                  `https://en.wikipedia.org/wiki/${wikiQuery}`,
-              ];
-            }
-          }
-        } catch (fallbackError) {
-          console.log(
-            `❌ Wikipedia fallback failed for ${topic}:`,
-            fallbackError.message
-          );
-        }
-      }
-
-      // Final attempt: Try one more time with different approach
-      if (!realContent) {
-        console.log(
-          `🔄 Final attempt - trying different search approach for: ${topic}`
-        );
-        try {
-          realContent = await generateRichContent(topic);
-          sources = [
-            `https://en.wikipedia.org/wiki/${topic.replace(/\s+/g, "_")}`,
-          ];
-        } catch (error) {
-          console.log(`❌ Final attempt failed: ${error.message}`);
-          return {
-            success: false,
-            error: `No Wikipedia content found for: ${topic}`,
-            content: null,
-          };
-        }
-      }
-
-      console.log(`✅ Successfully scraped REAL content for: ${topic}`);
       return {
         success: true,
-        content: realContent,
-        sources: sources,
+        content: {
+          ...richContent,
+          keyConcepts: keyConcepts,
+        },
+        sources: [
+          `https://en.wikipedia.org/wiki/${topic.replace(/\s+/g, "_")}`,
+        ],
       };
     } catch (error) {
       console.error("❌ Error scraping content:", error);
       return {
         success: false,
-        error: "Failed to scrape content",
+        error: error instanceof Error ? error.message : "Unknown error",
         content: null,
       };
     }
   },
 });
 
-// 100% Real Wikipedia scraping - NO MOCK CONTENT
+// PROPER Wikipedia scraping using FULL-TEXT SEARCH - NO MORE SLOP
 async function generateRichContent(topic: string) {
-  console.log(`🔄 100% Real Wikipedia scraping for: ${topic}`);
+  console.log(`🔄 Wikipedia full-text search for: ${topic}`);
 
-  // Try multiple search variations to find Wikipedia content
-  const searchVariations = [
-    topic,
-    topic.replace(/\s+/g, "_"), // Replace spaces with underscores
-    topic.toLowerCase(),
-    topic.replace(/[^a-zA-Z0-9\s]/g, ""), // Remove special characters
-    topic.split(" ")[0], // Just the first word
-    topic.split(" ").slice(0, 2).join(" "), // First two words
-  ];
+  try {
+    // Use Wikipedia REST API (the NEW and CLEAN one)
+    const restSearchUrl = `https://en.wikipedia.org/w/rest.php/v1/search/title?q=${encodeURIComponent(
+      topic
+    )}&limit=5`;
 
-  for (const searchTerm of searchVariations) {
-    try {
-      // Try direct Wikipedia API
-      const wikiQuery = encodeURIComponent(searchTerm);
-      const wikiUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${wikiQuery}`;
+    console.log(`📚 REST search URL: ${restSearchUrl}`);
+    const searchResponse = await fetch(restSearchUrl);
 
-      console.log(`📚 Trying Wikipedia API: ${wikiUrl}`);
-      const wikiResponse = await fetch(wikiUrl);
-
-      if (wikiResponse.ok) {
-        const wikiData = await wikiResponse.json();
-
-        if (wikiData.extract && !wikiData.type?.includes("disambiguation")) {
-          console.log(`✅ Found REAL Wikipedia content for: ${searchTerm}`);
-
-          // Extract key concepts using AI
-          const keyConcepts = await extractKeyConcepts(wikiData.extract, topic);
-
-          return {
-            topic,
-            overview: wikiData.extract,
-            keyConcepts: keyConcepts,
-            applications: [],
-            currentResearch: [],
-            interestingFacts: [wikiData.extract],
-            summary: wikiData.extract,
-          };
-        }
-      }
-    } catch (error) {
-      console.log(`❌ Wikipedia API failed for ${searchTerm}:`, error.message);
+    if (!searchResponse.ok) {
+      throw new Error(`REST search API failed: ${searchResponse.status}`);
     }
-  }
 
-  // If NO Wikipedia content found, return failure
-  console.log(`❌ NO Wikipedia content found for: ${topic}`);
-  throw new Error(`No Wikipedia content available for: ${topic}`);
+    const searchData = await searchResponse.json();
+    const searchResults = searchData.pages;
+
+    if (!searchResults || searchResults.length === 0) {
+      throw new Error(`No search results found for: ${topic}`);
+    }
+
+    // Find the best match (first result is usually the most relevant)
+    const bestMatch = searchResults[0];
+    console.log(`🎯 Found best match: "${bestMatch.title}" for "${topic}"`);
+    console.log(`📝 Excerpt: ${bestMatch.excerpt}`);
+    console.log(`📄 Description: ${bestMatch.description}`);
+
+    // Get the FULL article content using parse API
+    const pageId = bestMatch.id;
+    const parseUrl = `https://en.wikipedia.org/w/api.php?action=parse&pageid=${pageId}&prop=wikitext&format=json`;
+
+    console.log(`📖 Getting FULL article content from: ${parseUrl}`);
+    const parseResponse = await fetch(parseUrl);
+
+    if (!parseResponse.ok) {
+      throw new Error(`Parse API failed: ${parseResponse.status}`);
+    }
+
+    const parseData = await parseResponse.json();
+    const fullWikitext = parseData.parse?.wikitext?.["*"];
+
+    if (!fullWikitext) {
+      throw new Error(`No wikitext found for: ${bestMatch.title}`);
+    }
+
+    console.log(
+      `✅ Found FULL Wikipedia article for: ${bestMatch.title} (${fullWikitext.length} characters)`
+    );
+
+    // Clean the wikitext (remove markup, keep content)
+    const cleanContent = cleanWikitext(fullWikitext);
+
+    // Extract key concepts using AI from the full article
+    const keyConcepts = await extractKeyConcepts(cleanContent, topic);
+
+    return {
+      topic,
+      overview: cleanContent.substring(0, 500) + "...", // Truncated overview
+      fullContent: cleanContent, // Full article content for topic generation
+      keyConcepts: keyConcepts,
+      applications: [],
+      currentResearch: [],
+      interestingFacts: [cleanContent.substring(0, 200) + "..."],
+      summary: cleanContent.substring(0, 500) + "...",
+    };
+  } catch (error) {
+    console.log(
+      `❌ Wikipedia full-text search failed for "${topic}":`,
+      error instanceof Error ? error.message : "Unknown error"
+    );
+    throw new Error(`No Wikipedia content available for: ${topic}`);
+  }
+}
+
+// Clean Wikipedia wikitext markup
+function cleanWikitext(wikitext: string): string {
+  return (
+    wikitext
+      // Remove wiki markup
+      .replace(/\[\[([^|\]]+)\|([^\]]+)\]\]/g, "$2") // [[Link|Text]] → Text
+      .replace(/\[\[([^\]]+)\]\]/g, "$1") // [[Link]] → Link
+      .replace(/'''([^']+)'''/g, "$1") // '''Bold''' → Bold
+      .replace(/''([^']+)''/g, "$1") // ''Italic'' → Italic
+      .replace(/<ref[^>]*>.*?<\/ref>/g, "") // Remove references
+      .replace(/<ref[^>]*\/>/g, "") // Remove self-closing references
+      .replace(/{{[^}]+}}/g, "") // Remove templates
+      .replace(/={2,6}\s*([^=]+)\s*={2,6}/g, "$1") // Remove headers
+      .replace(/^\*+\s*/gm, "") // Remove bullet points
+      .replace(/^#+\s*/gm, "") // Remove numbered lists
+      .replace(/^\|\s*/gm, "") // Remove table markup
+      .replace(/\n{3,}/g, "\n\n") // Collapse multiple newlines
+      .replace(/^\s+|\s+$/g, "") // Trim whitespace
+      .substring(0, 8000)
+  ); // Limit to 8000 chars for AI processing
 }
 
 // Create a Mastra agent for concept extraction

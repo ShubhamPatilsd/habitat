@@ -28,6 +28,12 @@ export default function NodesPage() {
   const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
   const [nodeDragStart, setNodeDragStart] = useState({ x: 0, y: 0 });
   const [usedTopics, setUsedTopics] = useState<Set<string>>(new Set());
+  const [preloadedTopics, setPreloadedTopics] = useState<Map<string, any[]>>(
+    new Map()
+  );
+  const [preloadingNodes, setPreloadingNodes] = useState<Set<string>>(
+    new Set()
+  );
   const [zoom, setZoom] = useState(1);
   const [isPhysicsEnabled, setIsPhysicsEnabled] = useState(true);
   const [topics, setTopics] = useState<string[]>(["next1"]);
@@ -248,6 +254,61 @@ export default function NodesPage() {
     }
   };
 
+  // Preload topics for a node on hover
+  const preloadTopicsForNode = async (node: Node) => {
+    const nodeId = node.id;
+    const topicTitle = node.text;
+
+    // Don't preload if already preloading or already preloaded
+    if (preloadingNodes.has(nodeId) || preloadedTopics.has(nodeId)) {
+      return;
+    }
+
+    // Don't preload if node already has children
+    const hasChildren = nodes.some((n) => n.parentId === nodeId);
+    if (hasChildren) {
+      return;
+    }
+
+    console.log(`🚀 Preloading topics for: "${topicTitle}"`);
+    setPreloadingNodes((prev) => new Set(prev).add(nodeId));
+
+    try {
+      const response = await fetch("/api/generate-branches", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          topic: topicTitle,
+          usedTopics: Array.from(usedTopics),
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const topics = data.topics || [];
+
+        console.log(
+          `✅ Preloaded ${topics.length} topics for: "${topicTitle}"`
+        );
+
+        // Cache the preloaded topics
+        setPreloadedTopics((prev) => new Map(prev).set(nodeId, topics));
+      } else {
+        console.error(`❌ Failed to preload topics for: "${topicTitle}"`);
+      }
+    } catch (error) {
+      console.error(`❌ Error preloading topics for: "${topicTitle}":`, error);
+    } finally {
+      setPreloadingNodes((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(nodeId);
+        return newSet;
+      });
+    }
+  };
+
   // Enhanced fallback with more diverse topics
   const generateEnhancedFallbackTopics = async () => {
     const diverseFallbackTopics = [
@@ -394,43 +455,11 @@ export default function NodesPage() {
     }
   };
 
-  const generateNewNodes = async (parentNode: Node) => {
-    setIsGenerating(true);
-
-    // Generate topics from API with journey context
-    let topics: Array<{ title: string; description: string }> = [];
-    try {
-      // Build journey path for context
-      const journeyPath = [];
-      let currentNode = parentNode;
-      while (currentNode && journeyPath.length < 5) {
-        journeyPath.unshift(currentNode.text);
-        currentNode = nodes.find((n) => n.id === currentNode.parentId);
-      }
-
-      const response = await fetch("/api/explore-topic", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          topic: parentNode.text,
-          journey: journeyPath,
-          count: 5, // ALWAYS 5 topics
-          usedTopics: Array.from(usedTopics), // Pass used topics to avoid duplicates
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        topics = data.topics || [];
-      } else {
-        console.error("Failed to generate topics:", response.statusText);
-      }
-    } catch (error) {
-      console.error("Error generating topics:", error);
-    }
-
+  // Extract node creation logic for reuse
+  const createNodesFromTopics = async (
+    parentNode: Node,
+    topics: Array<{ title: string; description: string }>
+  ) => {
     // Filter out duplicate topics and ensure we have exactly 5 unique topics
     const uniqueTopics = topics.filter((topic) => {
       const topicTitle = topic.title.toLowerCase();
@@ -555,6 +584,64 @@ export default function NodesPage() {
 
     // Center the view on the parent node
     setTimeout(() => centerOnNode(parentNode), 100);
+  };
+
+  const generateNewNodes = async (parentNode: Node) => {
+    setIsGenerating(true);
+
+    // Check if we have preloaded topics for this node
+    const preloaded = preloadedTopics.get(parentNode.id);
+    if (preloaded && preloaded.length > 0) {
+      console.log(`⚡ Using preloaded topics for: "${parentNode.text}"`);
+      const topics = preloaded;
+
+      // Remove from preloaded cache since we're using them
+      setPreloadedTopics((prev) => {
+        const newMap = new Map(prev);
+        newMap.delete(parentNode.id);
+        return newMap;
+      });
+
+      // Use the preloaded topics directly
+      await createNodesFromTopics(parentNode, topics);
+      setIsGenerating(false);
+      return;
+    }
+
+    // Generate topics from API with journey context
+    let topics: Array<{ title: string; description: string }> = [];
+    try {
+      // Build journey path for context
+      const journeyPath = [];
+      let currentNode = parentNode;
+      while (currentNode && journeyPath.length < 5) {
+        journeyPath.unshift(currentNode.text);
+        currentNode = nodes.find((n) => n.id === currentNode.parentId);
+      }
+
+      const response = await fetch("/api/generate-branches", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          topic: parentNode.text,
+          usedTopics: Array.from(usedTopics), // Pass used topics to avoid duplicates
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        topics = data.topics || [];
+      } else {
+        console.error("Failed to generate topics:", response.statusText);
+      }
+    } catch (error) {
+      console.error("Error generating topics:", error);
+    }
+
+    // Use the extracted node creation logic
+    await createNodesFromTopics(parentNode, topics);
     setIsGenerating(false);
   };
 
@@ -744,9 +831,12 @@ export default function NodesPage() {
         setPopupPosition(position);
         setHoveredNode(node);
         setShowPopup(true);
+
+        // Start preloading topics for this node
+        preloadTopicsForNode(node);
       }
     },
-    []
+    [preloadTopicsForNode]
   );
 
   const handleNodeMouseLeave = useCallback(() => {
@@ -912,6 +1002,17 @@ export default function NodesPage() {
         backgroundColor: "#0114FF", // Blue for unvisited nodes
         opacity: 0.3, // Fade the node
         transform: "scale(0.8)", // Make it slightly smaller
+      };
+    } else if (preloadingNodes.has(node.id)) {
+      return {
+        backgroundColor: "#0114FF", // Blue for unvisited nodes
+        boxShadow: "0 0 20px #FFD700", // Golden glow for preloading
+        animation: "pulse 1.5s infinite",
+      };
+    } else if (preloadedTopics.has(node.id)) {
+      return {
+        backgroundColor: "#0114FF", // Blue for unvisited nodes
+        boxShadow: "0 0 15px #00FF00", // Green glow for preloaded
       };
     } else {
       return { backgroundColor: "#0114FF" }; // Blue for unvisited nodes
@@ -1234,6 +1335,18 @@ export default function NodesPage() {
           100% {
             opacity: 1;
             transform: scale(1) translateY(0);
+          }
+        }
+
+        @keyframes pulse {
+          0% {
+            box-shadow: 0 0 20px #ffd700;
+          }
+          50% {
+            box-shadow: 0 0 30px #ffd700, 0 0 40px #ffd700;
+          }
+          100% {
+            box-shadow: 0 0 20px #ffd700;
           }
         }
       `}</style>

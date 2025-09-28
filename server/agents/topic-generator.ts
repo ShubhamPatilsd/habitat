@@ -30,7 +30,7 @@ export const topicGeneratorAgent = new Agent({
     Each topic should be a single, clear concept that someone could dive deeper into.
     Keep titles concise (2-4 words) and descriptions brief (1-2 sentences).
   `,
-  model: openai("gpt-5"),
+  model: openai("gpt-4o-mini"),
 });
 
 // Helper function to generate topics

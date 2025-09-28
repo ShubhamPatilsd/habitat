@@ -13,10 +13,6 @@ if (!apiKey) {
 }
 console.log("OpenAI API key is configured");
 
-console.log(
-  "Initializing enhanced topic generator agent with model: gpt-4o-mini"
-);
-
 export const enhancedTopicGeneratorAgent = new Agent({
   name: "Enhanced Topic Generator",
   instructions: `
@@ -47,8 +43,7 @@ export const enhancedTopicGeneratorAgent = new Agent({
     Focus on creating topics that make people go "WOW, I need to know more about this!" 
     Think mysteries, breakthroughs, paradoxes, and mind-bending concepts that are genuinely fascinating!
   `,
-  model: openai("gpt-5"),
-  tools: { contentScraperTool },
+  model: openai("gpt-4o-mini"),
 });
 
 // Enhanced function to generate topics with rich content
@@ -187,19 +182,16 @@ export async function generateEnhancedTopics(
 
     richContent = contentResult.content;
 
-    // Generate related topics using the rich content
+    // Generate related topics using the FULL Wikipedia article content
+    const fullArticleContent = richContent.fullContent || richContent.overview;
+
     const response = await enhancedTopicGeneratorAgent.generate(
-      `Based on this REAL WEB CONTENT about "${topic}":
+      `Based on this COMPLETE WIKIPEDIA ARTICLE about "${topic}":
       
-      OVERVIEW: ${richContent.overview}
+      FULL ARTICLE CONTENT:
+      ${fullArticleContent}
       
       KEY CONCEPTS: ${richContent.keyConcepts.join(", ")}
-      
-      APPLICATIONS: ${richContent.applications.join(", ")}
-      
-      CURRENT RESEARCH: ${richContent.currentResearch.join(", ")}
-      
-      INTERESTING FACTS: ${richContent.interestingFacts.join("; ")}
       
       ${journeyContext}
       

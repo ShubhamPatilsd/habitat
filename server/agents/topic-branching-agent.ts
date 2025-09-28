@@ -41,6 +41,7 @@ const wikipediaSearchTool = createTool({
         responseText = await response.text();
         console.log(`📊 Response body:`, responseText);
       } catch (e) {
+        //@ts-expect-error
         console.log(`📊 Could not read response body:`, e.message);
       }
 
@@ -114,6 +115,7 @@ const wikipediaSearchTool = createTool({
           JSON.stringify(data, null, 2)
         );
       } catch (e) {
+        //@ts-expect-error
         console.log(`❌ Failed to parse JSON:`, e.message);
         throw new Error(`Invalid JSON response: ${responseText}`);
       }

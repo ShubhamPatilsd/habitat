@@ -218,7 +218,7 @@ export default function NodesPage() {
 
         console.log(
           "✅ AI generated topics:",
-          //@ts-ignore
+          //@ts-expect-error
           topics.map((t) => t.title)
         );
 
@@ -511,7 +511,7 @@ export default function NodesPage() {
         description:
           finalTopics[i]?.description ||
           `A related concept to explore further.`,
-        //@ts-ignore
+        //@ts-expect-error
         richContent: finalTopics[i]?.richContent,
         level: parentNode.level + 1,
         parentId: parentNode.id,
@@ -561,7 +561,7 @@ export default function NodesPage() {
       let currentNode = parentNode;
       while (currentNode && journeyPath.length < 5) {
         journeyPath.unshift(currentNode.text);
-        //@ts-ignore
+        //@ts-expect-error
         currentNode = nodes.find((n) => n.id === currentNode.parentId);
       }
 

@@ -49,7 +49,7 @@ app.post("/api/rabbithole", (req, res) => {
       JSON.stringify(node, null, 2)
     );
 
-    const nodeUrl = `http://localhost:3000/node/${id}`;
+    const nodeUrl = `http://localhost:3001/node/${id}`;
     console.log("Created node", id, "for", page.url);
     return res.json({ success: true, nodeUrl });
   } catch (err) {

@@ -1,5 +1,5 @@
 import { Agent } from "@mastra/core/agent";
-import { openai } from "@ai-sdk/openai";
+import { google } from "@ai-sdk/google";
 import { z } from "zod";
 
 // Verify OpenAI configuration
@@ -30,7 +30,7 @@ export const topicGeneratorAgent = new Agent({
     Each topic should be a single, clear concept that someone could dive deeper into.
     Keep titles concise (2-4 words) and descriptions brief (1-2 sentences).
   `,
-  model: openai("gpt-4o-mini"),
+  model: google("gemini-2.5-flash"),
 });
 
 // Helper function to generate topics

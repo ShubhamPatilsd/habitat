@@ -1,5 +1,5 @@
 import { Agent } from "@mastra/core/agent";
-import { openai } from "@ai-sdk/openai";
+import { google } from "@ai-sdk/google";
 import { z } from "zod";
 
 export const burrower = new Agent({
@@ -11,7 +11,7 @@ export const burrower = new Agent({
     
     Each topic should be a single, clear concept that someone could dive deeper into.
   `,
-  model: openai("gpt-4o-mini"),
+  model: google("gemini-2.5-flash"),
 });
 
 // Helper function to generate topics

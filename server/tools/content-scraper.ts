@@ -1,7 +1,7 @@
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
 import { Agent } from "@mastra/core/agent";
-import { openai } from "@ai-sdk/openai";
+import { google } from "@ai-sdk/google";
 
 export const contentScraperTool = createTool({
   id: "content-scraper",
@@ -144,7 +144,7 @@ function cleanWikitext(wikitext: string): string {
 const conceptExtractionAgent = new Agent({
   name: "Concept Extractor",
   instructions: `You are a concept extraction agent. Extract key concepts from Wikipedia content.`,
-  model: openai("gpt-4o-mini"),
+  model: google("gemini-2.5-flash"),
 });
 
 // AI-powered concept extraction function using Mastra

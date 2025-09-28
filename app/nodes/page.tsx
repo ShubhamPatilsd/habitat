@@ -1,6 +1,8 @@
 "use client";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { v4 as uuidv4 } from "uuid";
+import { useSearchParams } from "next/navigation";
+
 interface Node {
   id: string;
   x: number;
@@ -110,13 +112,30 @@ export default function NodesPage() {
           ? { ...node, isBurrowed: true, isCurrentNode: false }
           : node
       );
-      localStorage.setItem(currTopic, JSON.stringify(nodesWithBurrow));
+      const safeNodes = nodesWithBurrow.map((node) => ({
+        id: node.id,
+        x: node.x,
+        y: node.y,
+        text: node.text,
+        description: node.description,
+        level: node.level,
+        parentId: node.parentId,
+        isClicked: node.isClicked,
+        isCurrentNode: node.isCurrentNode,
+        isBurrowed: node.isBurrowed,
+        isFaded: node.isFaded,
+      }));
+      localStorage.setItem(currTopic, JSON.stringify(safeNodes));
     } catch (error) {
       console.error("Failed to save nodes to local storage:", error);
     }
     // ✅ just update topics & reset canvas
-    setTopics((prev) => [...prev, `next${prev.length + 1}`]);
-    setCurrTopic("next" + (topics.length + 1));
+    setTopics((prev) => {
+      const nextTopic = `next${prev.length + 1}`;
+      setCurrTopic(nextTopic);
+      return [...prev, nextTopic];
+    });
+
     // reset graph - start with 5 diverse topics
     setNodes([
       {
@@ -308,9 +327,44 @@ export default function NodesPage() {
 
   // No fallback topics - AI must work properly
 
-  // Generate random starting topics on component mount
+  const searchParams = useSearchParams();
+
+  // On component mount: either load extension node or random topics
   useEffect(() => {
-    generateRandomStartingTopics();
+    const nodeId = searchParams.get("id");
+
+    if (nodeId) {
+      // Case 1: Extension redirected here with ?id=...
+      fetch(`http://localhost:3001/node/${nodeId}`)
+        .then((res) => res.json())
+        .then((data) => {
+          const starterNode: Node = {
+            id: data.id || nodeId,
+            x: 1000,
+            y: 1000,
+            text: data.title || data.page?.title || "Untitled",
+            description:
+              (data.summary && data.summary.join(" ")) ||
+              "No description available.",
+            level: 0,
+            isCurrentNode: true,
+          };
+
+          setNodes([starterNode]);
+          setNodeIdCounter(2);
+          setConnections([]);
+          setCurrTopic("starter");
+          setTopics(["starter"]);
+
+          setTimeout(() => centerOnNode(starterNode), 100);
+        })
+        .catch((err) => {
+          console.error("Failed to load starter node:", err);
+        });
+    } else {
+      // Case 2: Normal startup
+      generateRandomStartingTopics();
+    }
   }, []);
 
   // Global mouse event listeners for node dragging
@@ -844,7 +898,20 @@ export default function NodesPage() {
   const handleTopicClick = (topic: string) => {
     try {
       // Save current topic state
-      localStorage.setItem(currTopic, JSON.stringify(nodes));
+      const safeNodes = nodes.map((node) => ({
+        id: node.id,
+        x: node.x,
+        y: node.y,
+        text: node.text,
+        description: node.description,
+        level: node.level,
+        parentId: node.parentId,
+        isClicked: node.isClicked,
+        isCurrentNode: node.isCurrentNode,
+        isBurrowed: node.isBurrowed,
+        isFaded: node.isFaded,
+      }));
+      localStorage.setItem(currTopic, JSON.stringify(safeNodes));
     } catch (error) {
       console.error("Failed to save nodes to local storage:", error);
     }
@@ -1116,7 +1183,9 @@ export default function NodesPage() {
             height: "200vh",
             left: "0vw",
             top: "0vh",
-            transition: "transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)",
+            transition: isDragging
+              ? "none"
+              : "transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)",
           }}
         >
           {/* Render connections */}

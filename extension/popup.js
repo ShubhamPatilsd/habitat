@@ -55,6 +55,14 @@ document.addEventListener("DOMContentLoaded", () => {
         statusEl.textContent = "✅ Node created!";
         previewWrap.style.display = "block";
         previewEl.textContent = JSON.stringify(data, null, 2);
+
+        // Redirect into Habitat frontend instead of backend
+        // extract the id from nodeUrl (e.g. http://localhost:3001/node/abc123)
+        const nodeUrl = data.nodeUrl;
+        const id = nodeUrl.split("/").pop();
+
+        const habitatUrl = `http://localhost:3000/nodes?id=${id}`;
+        chrome.tabs.create({ url: habitatUrl });
       } else {
         statusEl.textContent = "❌ Server error.";
         console.error("Server error:", data);

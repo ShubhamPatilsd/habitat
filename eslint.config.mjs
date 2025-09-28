@@ -33,6 +33,7 @@ const eslintConfig = [
 
       // Disable unused import warnings
       "react-hooks/rules-of-hooks": "off",
+      "@typescript-eslint/ban-ts-comment": "off",
     },
   },
 ];

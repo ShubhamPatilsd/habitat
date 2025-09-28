@@ -127,7 +127,7 @@ export default function NodesPage() {
         isBurrowed: node.isBurrowed,
         isFaded: node.isFaded,
       }));
-      localStorage.setItem(currTopic, JSON.stringify(safeNodes));
+      localStorage.setItem("currentTopic", JSON.stringify(safeNodes));
     } catch (error) {
       console.error("Failed to save nodes to local storage:", error);
     }
@@ -358,10 +358,7 @@ export default function NodesPage() {
           };
 
           setNodes([starterNode]);
-          setNodeIdCounter(2);
           setConnections([]);
-          setCurrTopic("starter");
-          setTopics(["starter"]);
 
           setTimeout(() => centerOnNode(starterNode), 100);
         })
@@ -925,7 +922,7 @@ export default function NodesPage() {
         isBurrowed: node.isBurrowed,
         isFaded: node.isFaded,
       }));
-      localStorage.setItem(currTopic, JSON.stringify(safeNodes));
+      localStorage.setItem("currentTopic", JSON.stringify(safeNodes));
     } catch (error) {
       console.error("Failed to save nodes to local storage:", error);
     }
@@ -947,7 +944,7 @@ export default function NodesPage() {
     } catch (error) {
       console.error(`Failed to load nodes for topic ${topic}:`, error);
     }
-    setCurrTopic(topic);
+    // setCurrTopic(topic);
   };
   // Function to get node style based on state
   const getNodeStyle = (node: Node) => {

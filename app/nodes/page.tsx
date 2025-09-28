@@ -518,7 +518,6 @@ export default function NodesPage() {
               onClick={(e) => handleNodeClick(node, e)}
               onMouseEnter={() => {
                 if (node.isClicked) {
-                  // only grey nodes
                   const timer = setTimeout(() => {
                     setHoveredNode(node);
                     setShowPopup(true);
@@ -530,10 +529,12 @@ export default function NodesPage() {
                 }
               }}
               onMouseLeave={() => {
-                if (hoverTimer) clearTimeout(hoverTimer);
-                setHoverTimer(null);
-                setHoveredNode(null);
-                setShowPopup(false);
+                if (node.isClicked) {
+                  if (hoverTimer) clearTimeout(hoverTimer);
+                  setHoverTimer(null);
+                  setHoveredNode(null);
+                  setShowPopup(false);
+                }
               }}
             >
               <div

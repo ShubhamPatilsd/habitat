@@ -403,32 +403,81 @@ export default function NodesPage() {
       style={{ position: "fixed", inset: 0, overflow: "hidden" }}
       className="bg-[#fff0d2]"
     >
-      {/* Stack display */}
-      <div className="fixed left-4 top-4 z-50 w-64 bg-white rounded-lg shadow-lg overflow-hidden">
-        <div className="bg-[#1e00ff] text-[#fff0d2] py-2 px-4 font-medium">
-          Rabbit Hole
-        </div>
-        <div className="max-h-[70vh] overflow-y-auto">
-          {topics.map((topic, index) => (
-            <div
-              key={index}
-              className="p-4 border-b border-gray-200 hover:bg-gray-50 transition-colors duration-200 cursor-pointer"
-              style={{
-                backgroundColor: "white",
-                transform: `translateY(${index * 2}px)`,
-                marginTop: index === 0 ? 0 : "-2px",
-                boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-                zIndex: topics.length - index,
-              }}
-              onClick={() => handleTopicClick(topic)}
-              role="button"
-              tabIndex={0}
-            >
-              {topic}
-            </div>
-          ))}
-        </div>
+      {/* Isometric 3D stack display with max 10 + underline current */}
+      <div className="fixed left-4 top-4 z-50">
+        <svg width="260" height={Math.min(topics.length, 10) * 80 + 100}>
+          {topics.slice(0, 10).map((topic, i) => {
+            const x = 40;
+            const y = 40 + i * 60; // vertical stacking
+            const width = 160;
+            const height = 40;
+            const depth = 12;
+            const isActive = currTopic === topic; // ✅ check if this panel is current
+
+            return (
+              <g
+                key={topic}
+                className="cursor-pointer"
+                onClick={() => handleTopicClick(topic)}
+              >
+                {/* Top face */}
+                <polygon
+                  points={`
+              ${x},${y}
+              ${x + width},${y}
+              ${x + width - 20},${y + height}
+              ${x - 20},${y + height}
+            `}
+                  fill="white"
+                  stroke="#1e00ff"
+                  strokeWidth="1.5"
+                />
+
+                {/* Side face */}
+                <polygon
+                  points={`
+              ${x - 20},${y + height}
+              ${x + width - 20},${y + height}
+              ${x + width - 20},${y + height + depth}
+              ${x - 20},${y + height + depth}
+            `}
+                  fill="#e0e0ff"
+                  stroke="#1e00ff"
+                  strokeWidth="1"
+                />
+
+                {/* Front face */}
+                <polygon
+                  points={`
+              ${x + width},${y}
+              ${x + width - 20},${y + height}
+              ${x + width - 20},${y + height + depth}
+              ${x + width},${y + depth}
+            `}
+                  fill="#c0c0ff"
+                  stroke="#1e00ff"
+                  strokeWidth="1"
+                />
+
+                {/* Label */}
+                <text
+                  x={x + width / 2}
+                  y={y + height / 2}
+                  textAnchor="middle"
+                  alignmentBaseline="middle"
+                  fontSize="14"
+                  fill="#1e00ff"
+                  fontWeight="bold"
+                  textDecoration={isActive ? "underline" : "none"} // ✅ underline active
+                >
+                  {topic}
+                </text>
+              </g>
+            );
+          })}
+        </svg>
       </div>
+
       {/* Burrow animation */}
       {showBurrowAnimation && (
         <div className="fixed inset-0 flex flex-col items-center justify-center z-50 pointer-events-none">

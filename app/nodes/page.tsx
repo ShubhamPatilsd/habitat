@@ -35,6 +35,8 @@ export default function NodesPage() {
   const [holeAnimation, setHoleAnimation] = useState<
     "appear" | "zoom" | "done"
   >("appear");
+  const [topics, setTopics] = useState<string[]>(["next1"]);
+  const [currTopic, setCurrTopic] = useState<string>("next1")
   const containerRef = useRef<HTMLDivElement>(null);
   const animationFrameRef = useRef<number | null>(null);
 
@@ -54,13 +56,15 @@ export default function NodesPage() {
   };
 
   const handleBurrow = () => {
-    // Save current nodes state to local storage
     try {
-      localStorage.setItem("root", JSON.stringify(nodes));
+      localStorage.setItem(currTopic, JSON.stringify(nodes));
+      console.log(currTopic);
     } catch (error) {
       console.error("Failed to save nodes to local storage:", error);
+      console.log("fail")
     }
 
+    
     setShowBurrowAnimation(true);
     setTimeout(() => {
       setShowBurrowAnimation(false);
@@ -92,9 +96,10 @@ export default function NodesPage() {
       }, 1000);
     }, 2000);
 
-    //save to localstorage
-
-    //clear nodes, make the start node the last one you clicked on
+    //set topic 
+    setTopics(prev => [...prev, `next${prev.length + 1}`]);
+    setCurrTopic("next"+(topics.length+1));
+    console.log(currTopic);
   };
 
 
@@ -205,7 +210,7 @@ export default function NodesPage() {
       }
     }
 
-    console.log(`Total nodes created: ${newNodes.length}`);
+    // console.log(`Total nodes created: ${newNodes.length}`);
 
     setNodes((prev: Node[]) => [...prev, ...newNodes]);
     setConnections((prev) => [...prev, ...newConnections]);
@@ -366,11 +371,60 @@ export default function NodesPage() {
     };
   }, [isPhysicsEnabled]);
 
+  const handleTopicClick = (topic: string) => {
+    try {
+      localStorage.setItem(currTopic,JSON.stringify(nodes));
+    } catch (error) {
+      console.error("Failed to save nodes to local storage:", error);
+    }
+
+    try {
+      const savedNodesJson = localStorage.getItem(topic);
+      if (savedNodesJson) {
+        const foundNodes = JSON.parse(savedNodesJson) as Node[];
+        setNodes(foundNodes);
+        // Reset connections when loading new nodes
+        setConnections([]);
+      }
+    } catch (error) {
+      console.error(`Failed to load nodes for topic ${topic}:`, error);
+    }
+
+
+    setCurrTopic(topic);
+  };
+
   return (
     <div
       style={{position: "fixed", inset: 0, overflow: "hidden"}}
       className="bg-[#fff0d2]"
     >
+      {/* Stack display */}
+      <div className="fixed left-4 top-4 z-50 w-64 bg-white rounded-lg shadow-lg overflow-hidden">
+        <div className="bg-[#1e00ff] text-[#fff0d2] py-2 px-4 font-medium">
+          Rabbit Hole
+        </div>
+        <div className="max-h-[70vh] overflow-y-auto">
+          {topics.map((topic, index) => (
+            <div
+              key={index}
+              className="p-4 border-b border-gray-200 hover:bg-gray-50 transition-colors duration-200 cursor-pointer"
+              style={{
+                backgroundColor: "white",
+                transform: `translateY(${index * 2}px)`,
+                marginTop: index === 0 ? 0 : "-2px",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                zIndex: topics.length - index
+              }}
+              onClick={() => handleTopicClick(topic)}
+              role="button"
+              tabIndex={0}
+            >
+              {topic}
+            </div>
+          ))}
+        </div>
+      </div>
       {/* Burrow animation */}
       {showBurrowAnimation && (
         <div className="fixed inset-0 flex flex-col items-center justify-center z-50 pointer-events-none">

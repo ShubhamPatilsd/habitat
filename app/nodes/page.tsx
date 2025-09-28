@@ -71,16 +71,21 @@ export default function NodesPage() {
 
   const handleResetPrevious = () => {
     if (containerRef.current && nodes.length > 1) {
-      const latestNode = nodes[nodes.length - 1]; // ✅ last created node
-      const resetZoom = 1;
+      // ✅ find the most recently created parent node (has children)
+      const latestParent = [...nodes]
+        .reverse()
+        .find((node) => nodes.some((child) => child.parentId === node.id));
 
+      if (!latestParent) return;
+
+      const resetZoom = 1;
       setZoom(resetZoom);
 
       const centerX = containerRef.current.clientWidth / 2;
       const centerY = containerRef.current.clientHeight / 2;
 
-      const offsetX = centerX - latestNode.x * resetZoom;
-      const offsetY = centerY - latestNode.y * resetZoom;
+      const offsetX = centerX - latestParent.x * resetZoom;
+      const offsetY = centerY - latestParent.y * resetZoom;
 
       setCanvasOffset({ x: offsetX, y: offsetY });
     }
